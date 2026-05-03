@@ -1,0 +1,28 @@
+import multer from "multer";
+
+const ALLOWED_MIME = [
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "image/gif",
+  "application/pdf",
+  "application/msword",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+];
+
+// Guarda o arquivo em memória — o controller faz o upload para o Cloudinary
+export const chatUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10 MB
+  fileFilter(_req, file, cb) {
+    if (ALLOWED_MIME.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(
+        new Error(
+          "Tipo de arquivo não permitido. Use imagens ou documentos PDF/Word.",
+        ),
+      );
+    }
+  },
+});

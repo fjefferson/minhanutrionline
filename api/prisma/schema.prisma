@@ -1,0 +1,270 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+enum Gender {
+  MALE
+  FEMALE
+  OTHER
+}
+
+enum NutritionalGoal {
+  LOSE_WEIGHT
+  MAINTAIN
+  GAIN_MUSCLE
+  CONTROL_GLYCEMIA
+}
+
+enum ActivityLevel {
+  SEDENTARY
+  LIGHT
+  MODERATE
+  INTENSE
+}
+
+enum DietType {
+  OMNIVORE
+  VEGETARIAN
+  VEGAN
+}
+
+enum PlanType {
+  BASIC
+  PLUS
+  PREMIUM
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  CANCELED
+  PAST_DUE
+  TRIALING
+}
+
+enum ChatSessionStatus {
+  OPEN
+  CLOSED
+}
+
+enum ConsultationStatus {
+  PENDING
+  CONFIRMED
+  COMPLETED
+  CANCELLED
+}
+
+model User {
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  password  String
+  role      Role     @default(USER)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  resetToken       String?
+  resetTokenExpiry DateTime?
+
+  subscription       Subscription?
+  symptomReports     SymptomReport[]
+  chatSessions       ChatSession[]
+  nutritionalProfile NutritionalProfile?
+  consultations      Consultation[]
+}
+
+model NutritionalProfile {
+  id                String           @id @default(cuid())
+  userId            String           @unique
+  birthDate         DateTime?
+  gender            Gender?
+  heightCm          Int?
+  weightKg          Float?
+  goal              NutritionalGoal?
+  activityLevel     ActivityLevel?
+  glp1Medication    String?
+  glp1StartDate     DateTime?
+  dietType          DietType?
+  allergies         String?
+  intolerances      String?
+  medicalConditions String?
+  otherMedications  String?
+  mealFrequency     Int?
+  foodDislikes      String?
+  occupation        String?
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+
+  user User @relation(fields: [userId], references: [id])
+}
+
+model Product {
+  id          String  @id @default(cuid())
+  slug        String  @unique
+  name        String
+  description String?
+  active      Boolean @default(true)
+  createdAt   DateTime @default(now())
+
+  plans          Plan[]
+  knowledgeItems KnowledgeItem[]
+  symptoms       Symptom[]
+  symptomReports SymptomReport[]
+}
+
+model Plan {
+  id           String   @id @default(cuid())
+  productId    String
+  type         PlanType
+  name         String
+  description  String?
+  priceInCents Int
+  features     String[]
+  mpPlanId     String?
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now())
+
+  product       Product        @relation(fields: [productId], references: [id])
+  subscriptions Subscription[]
+
+  @@unique([productId, type])
+}
+
+model Subscription {
+  id                 String             @id @default(cuid())
+  userId             String             @unique
+  planId             String
+  status             SubscriptionStatus @default(ACTIVE)
+  mpSubscriptionId   String?
+  mpPayerId          String?
+  currentPeriodStart DateTime?
+  currentPeriodEnd   DateTime?
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+
+  user User @relation(fields: [userId], references: [id])
+  plan Plan @relation(fields: [planId], references: [id])
+}
+
+model Symptom {
+  id        String @id @default(cuid())
+  productId String
+  name      String
+  slug      String
+
+  product        Product         @relation(fields: [productId], references: [id])
+  knowledgeItems KnowledgeItem[] @relation("KnowledgeItemSymptoms")
+  reportSymptoms ReportSymptom[]
+
+  @@unique([productId, slug])
+}
+
+model KnowledgeItem {
+  id        String   @id @default(cuid())
+  productId String
+  title     String
+  content   String
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  product  Product   @relation(fields: [productId], references: [id])
+  symptoms Symptom[] @relation("KnowledgeItemSymptoms")
+}
+
+model SymptomReport {
+  id              String    @id @default(cuid())
+  userId          String
+  productId       String
+  extraNotes      String?
+  aiResponse      String
+  createdAt       DateTime  @default(now())
+  helpful           Boolean?
+  reviewRequested   Boolean   @default(false)
+  reviewRequestedAt DateTime?
+  reviewResolvedAt  DateTime?
+  reviewResponse    String?
+
+  user     User            @relation(fields: [userId], references: [id])
+  product  Product         @relation(fields: [productId], references: [id])
+  symptoms ReportSymptom[]
+}
+
+model ReportSymptom {
+  reportId  String
+  symptomId String
+
+  report  SymptomReport @relation(fields: [reportId], references: [id])
+  symptom Symptom       @relation(fields: [symptomId], references: [id])
+
+  @@id([reportId, symptomId])
+}
+
+model ChatSession {
+  id             String            @id @default(cuid())
+  userId         String
+  status         ChatSessionStatus @default(OPEN)
+  createdAt      DateTime          @default(now())
+  closedAt       DateTime?
+  rating         Int?
+  ratingComment  String?
+
+  user     User          @relation(fields: [userId], references: [id])
+  messages ChatMessage[]
+}
+
+model ChatMessage {
+  id         String   @id @default(cuid())
+  sessionId  String
+  senderId   String
+  senderRole Role
+  content    String   @default("")
+  fileUrl    String?
+  fileType   String?
+  readAt     DateTime?
+  createdAt  DateTime @default(now())
+
+  session ChatSession @relation(fields: [sessionId], references: [id])
+}
+
+model Consultation {
+  id           String             @id @default(cuid())
+  userId       String
+  scheduledAt  DateTime
+  status       ConsultationStatus @default(PENDING)
+  meetingLink  String?
+  notes        String?
+  cancelReason String?
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+
+  user User @relation(fields: [userId], references: [id])
+}
+
+/// Bloqueia um slot específico (dia + hora Brazil) ou o dia inteiro na agenda
+model AgendaBlock {
+  id          String   @id @default(cuid())
+  blockedAt   DateTime /// UTC — dia + hora específica (ou meia-noite UTC = dia inteiro)
+  allDay      Boolean  @default(false) /// true = bloqueia o dia inteiro
+  reason      String?
+  createdAt   DateTime @default(now())
+}
+
+/// Singleton de configuração de consultas (id = "default")
+model ConsultationConfig {
+  id          String   @id @default("default")
+  graceDays   Int      @default(15)  /// dias de carência após cadastro
+  gapDays     Int      @default(30)  /// intervalo mínimo entre consultas
+  cancelDays  Int      @default(5)   /// antecedência mínima para cancelamento (dias)
+  bizHours    Int[]               /// horários disponíveis em horário Brasília (0-23)
+  bizDays     Int[]               /// dias da semana disponíveis (0=Dom, 1=Seg ... 6=Sáb)
+  updatedAt   DateTime @updatedAt
+}
