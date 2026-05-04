@@ -7,7 +7,7 @@ import glp1Routes from "./glp1.routes";
 import chatRoutes from "./chat.routes";
 import profileRoutes from "./profile.routes";
 import consultationRoutes from "./consultation.routes";
-import { getPlans } from "../controllers/admin.controller";
+import { getPlans, getPublicPlans } from "../controllers/admin.controller";
 
 const router = Router();
 
@@ -20,5 +20,6 @@ router.use("/chat", chatRoutes);
 router.use("/profile", profileRoutes);
 router.use("/consultations", consultationRoutes);
 router.get("/plans", getPlans);
+router.get("/plans/public", getPublicPlans);
 
 export default router;

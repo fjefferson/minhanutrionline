@@ -63,6 +63,22 @@ export async function getPlans(req: Request, res: Response) {
   res.json(plans);
 }
 
+export async function getPublicPlans(req: Request, res: Response) {
+  const plans = await prisma.plan.findMany({
+    where: { active: true },
+    select: {
+      id: true,
+      name: true,
+      type: true,
+      description: true,
+      priceInCents: true,
+      features: true,
+    },
+    orderBy: { priceInCents: "asc" },
+  });
+  res.json(plans);
+}
+
 export async function updatePlan(req: Request, res: Response) {
   const id = req.params["id"] as string;
   const { name, description, priceInCents, active, features } = req.body as {

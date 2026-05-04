@@ -1,7 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
 import {
-  Check,
   ClipboardList,
   Brain,
   MessageCircle,
@@ -10,6 +9,7 @@ import {
   Star,
 } from "lucide-react";
 import HomeHeader from "@/components/layout/HomeHeader";
+import PlansSection from "@/components/home/PlansSection";
 
 export default function HomePage() {
   return (
@@ -196,98 +196,7 @@ export default function HomePage() {
       </section>
 
       {/* Planos */}
-      <section id="planos" className="py-20 bg-gray-50">
-        <div className="max-w-6xl mx-auto px-6">
-          <h2 className="text-3xl font-bold text-center text-gray-900 mb-4">
-            Planos
-          </h2>
-          <p className="text-center text-gray-500 mb-14">
-            Escolha o suporte ideal para a sua jornada
-          </p>
-          <div className="grid md:grid-cols-3 gap-8">
-            {[
-              {
-                name: "GLP-1 Basic",
-                price: "R$ 19,90",
-                period: "/mês",
-                highlight: false,
-                features: [
-                  "Formulário de sintomas ilimitado",
-                  "Orientações personalizadas por IA",
-                  "Histórico de consultas",
-                  "Base de conhecimento GLP-1",
-                ],
-              },
-              {
-                name: "GLP-1 Plus",
-                price: "R$ 49,90",
-                period: "/mês",
-                highlight: true,
-                features: [
-                  "Tudo do Basic",
-                  "Chat ao vivo com a nutricionista",
-                  "Respostas em até 24h",
-                  "Acompanhamento contínuo",
-                ],
-              },
-              {
-                name: "GLP-1 Premium",
-                price: "R$ 149,90",
-                period: "/mês",
-                highlight: false,
-                features: [
-                  "Tudo do Plus",
-                  "Consulta de 1h com a nutricionista",
-                  "Atendimento prioritário",
-                  "Plano alimentar personalizado",
-                ],
-              },
-            ].map((plan) => (
-              <div
-                key={plan.name}
-                className={`rounded-2xl p-8 ${plan.highlight ? "bg-green-600 text-white shadow-xl scale-105" : "bg-white border border-gray-100 shadow-sm"}`}
-              >
-                <h3
-                  className={`font-bold text-xl mb-1 ${plan.highlight ? "text-white" : "text-gray-900"}`}
-                >
-                  {plan.name}
-                </h3>
-                <div className="flex items-end gap-1 mb-6 mt-3">
-                  <span
-                    className={`text-4xl font-bold ${plan.highlight ? "text-white" : "text-gray-900"}`}
-                  >
-                    {plan.price}
-                  </span>
-                  <span
-                    className={`text-sm mb-1 ${plan.highlight ? "text-green-100" : "text-gray-400"}`}
-                  >
-                    {plan.period}
-                  </span>
-                </div>
-                <ul className="space-y-3 mb-8">
-                  {plan.features.map((f) => (
-                    <li
-                      key={f}
-                      className={`flex items-center gap-2 text-sm ${plan.highlight ? "text-green-50" : "text-gray-600"}`}
-                    >
-                      <Check
-                        className={`w-4 h-4 shrink-0 ${plan.highlight ? "text-green-200" : "text-green-500"}`}
-                      />
-                      {f}
-                    </li>
-                  ))}
-                </ul>
-                <Link
-                  href="/register"
-                  className={`block text-center py-3 rounded-xl font-semibold transition text-sm ${plan.highlight ? "bg-white text-green-700 hover:bg-green-50" : "bg-green-600 text-white hover:bg-green-700"}`}
-                >
-                  Assinar agora
-                </Link>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
+      <PlansSection />
 
       {/* Footer */}
       <footer className="border-t border-gray-100 py-10 text-center text-sm text-gray-400">
