@@ -21,6 +21,8 @@ import {
   Settings,
   CalendarDays,
   Users,
+  Menu,
+  X,
   LucideIcon,
 } from "lucide-react";
 
@@ -71,10 +73,16 @@ export default function Sidebar() {
   const router = useRouter();
   const { user, logout, planType } = useAuthStore();
   const [profileIncomplete, setProfileIncomplete] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
 
   const isAdmin = user?.role === "ADMIN";
   const nav = isAdmin ? adminNav : userNav;
   const plan = planType();
+
+  // Close sidebar on route change (mobile)
+  useEffect(() => {
+    setMobileOpen(false);
+  }, [pathname]);
 
   useEffect(() => {
     if (isAdmin) return;
@@ -100,17 +108,24 @@ export default function Sidebar() {
     router.push("/login");
   };
 
-  return (
-    <aside className="w-64 min-h-screen bg-white border-r border-gray-100 flex flex-col">
+  const sidebarContent = (
+    <>
       {/* Logo */}
-      <div className="h-16 flex items-center px-6 border-b border-gray-100">
+      <div className="h-16 flex items-center justify-between px-6 border-b border-gray-100 shrink-0">
         <span className="font-bold text-green-700 text-lg">
           MinhaNutri Online
         </span>
+        <button
+          type="button"
+          onClick={() => setMobileOpen(false)}
+          className="md:hidden p-1.5 hover:bg-gray-100 rounded-lg"
+        >
+          <X size={18} className="text-gray-500" />
+        </button>
       </div>
 
       {/* Nav */}
-      <nav className="flex-1 p-4 space-y-1">
+      <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
         {nav.map((item) => {
           const locked =
             item.minPlan && plan
@@ -148,14 +163,14 @@ export default function Sidebar() {
       </nav>
 
       {/* User */}
-      <div className="p-4 border-t border-gray-100">
+      <div className="p-4 border-t border-gray-100 shrink-0">
         {!isAdmin && plan && (
           <div className="mb-3 px-3 py-2 bg-green-50 rounded-xl">
             <p className="text-xs text-green-600 font-medium">Plano {plan}</p>
           </div>
         )}
         <div className="flex items-center gap-3 px-3 py-2">
-          <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center text-green-700 font-semibold text-sm">
+          <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center text-green-700 font-semibold text-sm shrink-0">
             {user?.name?.[0]?.toUpperCase() ?? "U"}
           </div>
           <div className="flex-1 min-w-0">
@@ -173,6 +188,45 @@ export default function Sidebar() {
           Sair
         </button>
       </div>
-    </aside>
+    </>
+  );
+
+  return (
+    <>
+      {/* Mobile top bar */}
+      <div className="md:hidden fixed top-0 left-0 right-0 z-40 h-14 bg-white border-b border-gray-100 flex items-center px-4 gap-3">
+        <button
+          type="button"
+          onClick={() => setMobileOpen(true)}
+          className="p-1.5 hover:bg-gray-100 rounded-lg"
+        >
+          <Menu size={20} className="text-gray-600" />
+        </button>
+        <span className="font-bold text-green-700 text-base">
+          MinhaNutri Online
+        </span>
+      </div>
+
+      {/* Mobile overlay */}
+      {mobileOpen && (
+        <div
+          className="md:hidden fixed inset-0 z-40 bg-black/40 backdrop-blur-sm"
+          onClick={() => setMobileOpen(false)}
+        />
+      )}
+
+      {/* Sidebar — desktop: static, mobile: slide-in overlay */}
+      <aside
+        className={`
+          fixed md:static inset-y-0 left-0 z-50
+          w-64 bg-white border-r border-gray-100 flex flex-col
+          transition-transform duration-300
+          ${mobileOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"}
+        `}
+      >
+        {sidebarContent}
+      </aside>
+    </>
   );
 }
+

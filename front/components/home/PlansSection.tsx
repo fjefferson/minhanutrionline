@@ -36,12 +36,12 @@ export default function PlansSection() {
   const highlightIndex = Math.floor(plans.length / 2);
 
   return (
-    <section id="planos" className="py-20 bg-gray-50">
-      <div className="max-w-6xl mx-auto px-6">
-        <h2 className="text-3xl font-bold text-center text-gray-900 mb-4">
+    <section id="planos" className="py-14 sm:py-20 bg-gray-50">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6">
+        <h2 className="text-2xl sm:text-3xl font-bold text-center text-gray-900 mb-4">
           Planos
         </h2>
-        <p className="text-center text-gray-500 mb-14">
+        <p className="text-center text-gray-500 mb-10 sm:mb-14">
           Escolha o suporte ideal para a sua jornada
         </p>
 
@@ -58,15 +58,15 @@ export default function PlansSection() {
         )}
 
         {!loading && plans.length > 0 && (
-          <div className="grid md:grid-cols-3 gap-8 items-start">
+          <div className="grid sm:grid-cols-3 gap-6 sm:gap-8 items-start">
             {plans.map((plan, i) => {
               const highlight = i === highlightIndex;
               return (
                 <div
                   key={plan.id}
-                  className={`rounded-2xl p-8 ${
+                  className={`rounded-2xl p-6 sm:p-8 ${
                     highlight
-                      ? "bg-green-600 text-white shadow-xl scale-105"
+                      ? "bg-green-600 text-white shadow-xl md:scale-105"
                       : "bg-white border border-gray-100 shadow-sm"
                   }`}
                 >

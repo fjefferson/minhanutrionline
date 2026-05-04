@@ -17,31 +17,31 @@ export default function HomePage() {
       <HomeHeader />
 
       {/* Hero */}
-      <section className="max-w-6xl mx-auto px-6 pt-16 pb-20">
-        <div className="flex flex-col md:flex-row items-center gap-12">
+      <section className="max-w-6xl mx-auto px-4 sm:px-6 pt-10 sm:pt-16 pb-14 sm:pb-20">
+        <div className="flex flex-col md:flex-row items-center gap-8 md:gap-12">
           {/* Texto */}
           <div className="flex-1 text-center md:text-left">
-            <span className="inline-block bg-green-50 text-green-700 text-sm font-medium px-4 py-1.5 rounded-full mb-6">
+            <span className="inline-block bg-green-50 text-green-700 text-xs sm:text-sm font-medium px-4 py-1.5 rounded-full mb-5">
               Especialistas em GLP-1 / Canetas Emagrecedoras
             </span>
-            <h1 className="text-5xl font-bold text-gray-900 leading-tight mb-6">
+            <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-gray-900 leading-tight mb-5">
               Suporte nutricional especializado para o seu tratamento
             </h1>
-            <p className="text-xl text-gray-500 mb-10">
+            <p className="text-base sm:text-lg md:text-xl text-gray-500 mb-8">
               Descreva seus sintomas e receba orientações personalizadas
               baseadas em protocolos nutricionais criados por nutricionista
               especialista em GLP-1.
             </p>
-            <div className="flex gap-4 flex-wrap justify-center md:justify-start">
+            <div className="flex gap-3 flex-wrap justify-center md:justify-start">
               <Link
                 href="/register"
-                className="bg-green-600 text-white px-8 py-3.5 rounded-xl font-semibold hover:bg-green-700 transition text-lg"
+                className="bg-green-600 text-white px-6 sm:px-8 py-3 rounded-xl font-semibold hover:bg-green-700 transition text-base sm:text-lg"
               >
                 Começar agora
               </Link>
               <Link
                 href="#planos"
-                className="border border-gray-200 text-gray-700 px-8 py-3.5 rounded-xl font-semibold hover:bg-gray-50 transition text-lg"
+                className="border border-gray-200 text-gray-700 px-6 sm:px-8 py-3 rounded-xl font-semibold hover:bg-gray-50 transition text-base sm:text-lg"
               >
                 Ver planos
               </Link>
@@ -50,7 +50,7 @@ export default function HomePage() {
 
           {/* Foto hero */}
           <div className="md:w-110 shrink-0 w-full">
-            <div className="relative h-100 md:h-120 rounded-3xl overflow-hidden shadow-xl">
+            <div className="relative h-64 sm:h-80 md:h-120 rounded-3xl overflow-hidden shadow-xl">
               <Image
                 src="/images/hero_images/file_00000000b36c720eae05e581ccec3bef.png"
                 alt="Elane Oliveira — Nutricionista no consultório"
@@ -65,12 +65,12 @@ export default function HomePage() {
       </section>
 
       {/* Como funciona */}
-      <section className="bg-gray-50 py-20">
-        <div className="max-w-6xl mx-auto px-6">
-          <h2 className="text-3xl font-bold text-center text-gray-900 mb-14">
+      <section className="bg-gray-50 py-14 sm:py-20">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6">
+          <h2 className="text-2xl sm:text-3xl font-bold text-center text-gray-900 mb-10 sm:mb-14">
             Como funciona
           </h2>
-          <div className="grid md:grid-cols-3 gap-8">
+          <div className="grid sm:grid-cols-3 gap-5 sm:gap-8">
             {[
               {
                 icon: <ClipboardList className="w-5 h-5 text-green-700" />,
@@ -111,13 +111,13 @@ export default function HomePage() {
       </section>
 
       {/* Nutricionista */}
-      <section className="py-20">
-        <div className="max-w-6xl mx-auto px-6">
+      <section className="py-14 sm:py-20">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6">
           <div className="bg-linear-to-br from-green-50 to-emerald-50 rounded-3xl overflow-hidden">
             <div className="flex flex-col md:flex-row items-center gap-0">
               {/* Foto */}
-              <div className="md:w-80 shrink-0 w-full p-6 md:p-8 flex items-center justify-center">
-                <div className="relative h-80 md:h-96 w-full rounded-3xl overflow-hidden shadow-md">
+              <div className="md:w-80 shrink-0 w-full p-5 md:p-8 flex items-center justify-center">
+                <div className="relative h-72 sm:h-80 md:h-96 w-full rounded-3xl overflow-hidden shadow-md">
                   <Image
                     src="/images/hero_images/file_00000000fa5c720eabf48da8e603cdfe.png"
                     alt="Elane Oliveira — Nutricionista"
@@ -129,11 +129,11 @@ export default function HomePage() {
               </div>
 
               {/* Info */}
-              <div className="flex-1 p-10 md:p-14">
-                <p className="text-green-700 font-semibold text-sm uppercase tracking-wider mb-3">
+              <div className="flex-1 px-5 pb-8 pt-2 sm:p-8 md:p-14">
+                <p className="text-green-700 font-semibold text-xs sm:text-sm uppercase tracking-wider mb-3">
                   Responsável técnica
                 </p>
-                <h2 className="text-4xl font-bold text-gray-900 mb-1">
+                <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900 mb-1">
                   Elane Oliveira
                 </h2>
                 <p className="text-gray-500 font-medium mb-6">
