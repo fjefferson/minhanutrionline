@@ -8,7 +8,11 @@ import { FRONTEND_URL } from "./config/env";
 const app = express();
 
 app.use(helmet());
-app.use(cors({ origin: FRONTEND_URL }));
+app.use(
+  cors({
+    origin: process.env["NODE_ENV"] === "production" ? FRONTEND_URL : "*",
+  }),
+);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 

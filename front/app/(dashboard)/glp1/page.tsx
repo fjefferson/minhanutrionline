@@ -13,6 +13,8 @@ import {
   ArrowLeft,
   ChevronRight,
   MessageSquare,
+  UserCircle,
+  Lock,
 } from "lucide-react";
 
 interface Symptom {
@@ -32,11 +34,61 @@ interface Report {
 
 type View = "history" | "form" | "result";
 
+function PlanGateModal() {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-8 flex flex-col items-center gap-5 text-center">
+        <div className="w-14 h-14 rounded-full bg-green-100 flex items-center justify-center">
+          <Lock className="w-7 h-7 text-green-600" />
+        </div>
+        <h2 className="text-lg font-bold text-gray-900">Plano necessário</h2>
+        <p className="text-sm text-gray-500">
+          As consultas por sintomas GLP-1 estão disponíveis a partir do plano
+          Basic. Assine para ter acesso.
+        </p>
+        <Link
+          href="/planos"
+          className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-3 rounded-xl transition-colors text-sm"
+        >
+          Ver planos
+        </Link>
+      </div>
+    </div>
+  );
+}
+
+function ProfileGateModal() {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-8 flex flex-col items-center gap-5 text-center">
+        <div className="w-14 h-14 rounded-full bg-amber-100 flex items-center justify-center">
+          <UserCircle className="w-7 h-7 text-amber-600" />
+        </div>
+        <h2 className="text-lg font-bold text-gray-900">Perfil incompleto</h2>
+        <p className="text-sm text-gray-500">
+          Para consultar os sintomas GLP-1, precisamos de algumas informações
+          básicas sobre você: sexo, altura, peso e objetivo.
+        </p>
+        <Link
+          href="/perfil"
+          className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-3 rounded-xl transition-colors text-sm"
+        >
+          Preencher perfil agora
+        </Link>
+      </div>
+    </div>
+  );
+}
+
 export default function Glp1Page() {
   const [view, setView] = useState<View>("history");
   const [history, setHistory] = useState<Report[]>([]);
   const [loadingHistory, setLoadingHistory] = useState(true);
   const [symptoms, setSymptoms] = useState<Symptom[]>([]);
+  const [profileBlocked, setProfileBlocked] = useState(false);
+  const [profileChecked, setProfileChecked] = useState(false);
+  const [planBlocked, setPlanBlocked] = useState(false);
+  const [planChecked, setPlanChecked] = useState(false);
 
   // form
   const [selected, setSelected] = useState<string[]>([]);
@@ -55,8 +107,17 @@ export default function Glp1Page() {
     setLoadingHistory(true);
     api
       .get("/glp1/reports")
-      .then((r) => setHistory(r.data))
-      .finally(() => setLoadingHistory(false));
+      .then((r) => {
+        setHistory(r.data);
+        setPlanBlocked(false);
+      })
+      .catch((err) => {
+        if (err?.response?.status === 403) setPlanBlocked(true);
+      })
+      .finally(() => {
+        setLoadingHistory(false);
+        setPlanChecked(true);
+      });
   };
 
   useEffect(() => {
@@ -65,6 +126,17 @@ export default function Glp1Page() {
       .get("/glp1/symptoms")
       .then((r) => setSymptoms(r.data))
       .catch(() => {});
+    // Gate: verifica se perfil tem dados básicos
+    api
+      .get("/profile/nutritional")
+      .then((r) => {
+        const p = r.data;
+        const incomplete =
+          !p || !p.gender || !p.heightCm || !p.weightKg || !p.goal;
+        setProfileBlocked(incomplete);
+      })
+      .catch(() => setProfileBlocked(true))
+      .finally(() => setProfileChecked(true));
   }, []);
 
   const toggle = (slug: string) =>
@@ -97,8 +169,13 @@ export default function Glp1Page() {
       setReviewError("");
       setView("result");
       loadHistory();
-    } catch {
-      setFormError("Erro ao processar. Tente novamente.");
+    } catch (err: any) {
+      if (err?.response?.status === 403) {
+        setPlanBlocked(true);
+        setView("history");
+      } else {
+        setFormError("Erro ao processar. Tente novamente.");
+      }
     } finally {
       setSubmitting(false);
     }
@@ -353,6 +430,8 @@ export default function Glp1Page() {
   /* ── HISTORY VIEW (default) ── */
   return (
     <div className="max-w-3xl">
+      {planChecked && planBlocked && <PlanGateModal />}
+      {profileChecked && profileBlocked && !planBlocked && <ProfileGateModal />}
       <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Consultas GLP-1</h1>

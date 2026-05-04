@@ -2,6 +2,10 @@ import { Response } from "express";
 import { prisma } from "../lib/prisma";
 import { AuthenticatedRequest } from "../middlewares/auth.middleware";
 import cloudinary from "../config/cloudinary";
+import {
+  sendChatReplyNotification,
+  sendChatPatientMessageNotification,
+} from "../services/sendpulse.service";
 
 // GET /chat/sessions — todas as sessões do usuário (histórico)
 export async function getSessions(req: AuthenticatedRequest, res: Response) {
@@ -142,7 +146,50 @@ export async function sendMessage(req: AuthenticatedRequest, res: Response) {
     },
   });
 
+  // Dispara notificação por e-mail apenas na PRIMEIRA mensagem da sessão
+  // (para não enviar spam em cada mensagem de um chat em andamento)
+  const priorCount = await prisma.chatMessage.count({
+    where: { sessionId: id, senderRole: role },
+  });
+
+  if (priorCount === 0) {
+    if (role === "ADMIN") {
+      // Primeira resposta da nutri → notifica paciente
+      prisma.user
+        .findUnique({
+          where: { id: session.userId },
+          select: { name: true, email: true },
+        })
+        .then((patient) => {
+          if (patient) sendChatReplyNotification(patient);
+        })
+        .catch(() => {});
+    } else {
+      // Primeira mensagem do paciente na sessão → notifica nutri
+      prisma.user
+        .findUnique({ where: { id: userId }, select: { name: true } })
+        .then((patient) => {
+          if (patient)
+            sendChatPatientMessageNotification({ name: patient.name });
+        })
+        .catch(() => {});
+    }
+  }
+
   res.status(201).json(message);
+}
+
+// GET /chat/unread-count — nº de msgs não lidas do ADMIN para o usuário
+export async function getUnreadCount(req: AuthenticatedRequest, res: Response) {
+  const userId = req.user!.userId;
+  const count = await prisma.chatMessage.count({
+    where: {
+      session: { userId },
+      senderRole: "ADMIN",
+      readAt: null,
+    },
+  });
+  res.json({ count });
 }
 
 // POST /chat/session/:id/rating

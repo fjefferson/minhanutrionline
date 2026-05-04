@@ -10,6 +10,8 @@ const ALLOWED_MIME = [
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
 ];
 
+const IMAGE_MIME = ["image/jpeg", "image/png", "image/webp"];
+
 // Guarda o arquivo em memória — o controller faz o upload para o Cloudinary
 export const chatUpload = multer({
   storage: multer.memoryStorage(),
@@ -23,6 +25,18 @@ export const chatUpload = multer({
           "Tipo de arquivo não permitido. Use imagens ou documentos PDF/Word.",
         ),
       );
+    }
+  },
+});
+
+export const avatarUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5 MB
+  fileFilter(_req, file, cb) {
+    if (IMAGE_MIME.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error("Use uma imagem JPEG, PNG ou WebP."));
     }
   },
 });

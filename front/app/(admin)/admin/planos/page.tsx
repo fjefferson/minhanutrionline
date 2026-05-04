@@ -233,8 +233,17 @@ export default function AdminPlansPage() {
                       key={i}
                       className="flex items-center gap-2 bg-gray-50 rounded-lg px-3 py-1.5"
                     >
-                      <span className="text-green-500 text-xs">✓</span>
-                      <span className="flex-1 text-sm text-gray-700">{f}</span>
+                      <span className="text-green-500 text-xs shrink-0">✓</span>
+                      <input
+                        type="text"
+                        value={f}
+                        onChange={(e) => {
+                          const updated = [...form.features];
+                          updated[i] = e.target.value;
+                          setForm({ ...form, features: updated });
+                        }}
+                        className="flex-1 text-sm text-gray-700 bg-transparent focus:outline-none focus:bg-white focus:ring-1 focus:ring-green-400 rounded px-1 py-0.5"
+                      />
                       <button
                         onClick={() =>
                           setForm({
@@ -244,7 +253,7 @@ export default function AdminPlansPage() {
                             ),
                           })
                         }
-                        className="text-gray-300 hover:text-red-400 text-xs font-bold"
+                        className="text-gray-300 hover:text-red-400 text-xs font-bold shrink-0"
                       >
                         ✕
                       </button>

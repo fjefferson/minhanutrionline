@@ -1,7 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import Image from "next/image";
 import api from "@/lib/api";
+import { useAuthStore } from "@/store/auth.store";
 import {
   User,
   Activity,
@@ -9,6 +11,7 @@ import {
   Utensils,
   Save,
   CheckCircle,
+  Camera,
 } from "lucide-react";
 
 type Gender = "MALE" | "FEMALE" | "OTHER";
@@ -119,11 +122,36 @@ const selectClass = inputClass + " bg-white";
 const textareaClass = inputClass + " resize-none";
 
 export default function PerfilPage() {
+  const { user, setAvatar } = useAuthStore();
   const [form, setForm] = useState<ProfileForm>(EMPTY);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState("");
+
+  // Avatar upload
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [avatarUploading, setAvatarUploading] = useState(false);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+
+  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setAvatarPreview(URL.createObjectURL(file));
+    setAvatarUploading(true);
+    try {
+      const fd = new FormData();
+      fd.append("avatar", file);
+      const res = await api.post("/auth/avatar", fd, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      setAvatar(res.data.avatarUrl);
+    } catch {
+      setAvatarPreview(null);
+    } finally {
+      setAvatarUploading(false);
+    }
+  };
 
   useEffect(() => {
     api
@@ -192,12 +220,63 @@ export default function PerfilPage() {
           Meu perfil nutricional
         </h1>
         <p className="text-sm text-gray-500 mt-1">
-          Essas informações personalizam as orientações geradas pela IA para
-          você.
+          Essas informações personalizam as orientações da nutricionista e suas
+          ferramentas, mas não são obrigatórias. Preencha o que se sentir
+          confortável e atualize sempre que quiser!
         </p>
       </div>
 
       <div className="space-y-8">
+        {/* Avatar */}
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+          <div className="flex items-center gap-5">
+            <div className="relative shrink-0">
+              <div className="w-20 h-20 rounded-full overflow-hidden bg-green-100 flex items-center justify-center">
+                {avatarPreview || user?.avatarUrl ? (
+                  <Image
+                    src={avatarPreview ?? user!.avatarUrl!}
+                    alt="Avatar"
+                    width={80}
+                    height={80}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <span className="text-green-700 font-bold text-2xl">
+                    {user?.name?.[0]?.toUpperCase() ?? "U"}
+                  </span>
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={avatarUploading}
+                className="absolute -bottom-1 -right-1 w-7 h-7 bg-green-600 hover:bg-green-700 text-white rounded-full flex items-center justify-center shadow transition disabled:opacity-60"
+              >
+                <Camera className="w-3.5 h-3.5" />
+              </button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                className="hidden"
+                onChange={handleAvatarChange}
+              />
+            </div>
+            <div>
+              <p className="font-semibold text-gray-900">{user?.name}</p>
+              <p className="text-sm text-gray-500">{user?.email}</p>
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={avatarUploading}
+                className="mt-2 text-xs text-green-600 hover:text-green-700 font-medium disabled:opacity-60"
+              >
+                {avatarUploading ? "Enviando..." : "Alterar foto"}
+              </button>
+            </div>
+          </div>
+        </div>
+
         {/* Dados pessoais */}
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
           <SectionTitle
@@ -264,13 +343,49 @@ export default function PerfilPage() {
           />
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Field label="Medicamento GLP-1 em uso">
-              <input
-                type="text"
-                placeholder="Ex: Ozempic 0.5mg"
+              <select
                 value={form.glp1Medication}
                 onChange={set("glp1Medication")}
-                className={inputClass}
-              />
+                className={selectClass}
+              >
+                <option value="">Selecione</option>
+                <optgroup label="Semaglutida">
+                  <option value="Ozempic 0.5mg">Ozempic® 0.5mg</option>
+                  <option value="Ozempic 1mg">Ozempic® 1mg</option>
+                  <option value="Wegovy 0.25mg">Wegovy® 0.25mg</option>
+                  <option value="Wegovy 0.5mg">Wegovy® 0.5mg</option>
+                  <option value="Wegovy 1mg">Wegovy® 1mg</option>
+                  <option value="Wegovy 1.7mg">Wegovy® 1.7mg</option>
+                  <option value="Wegovy 2.4mg">Wegovy® 2.4mg</option>
+                  <option value="Rybelsus 3mg">Rybelsus® 3mg (oral)</option>
+                  <option value="Rybelsus 7mg">Rybelsus® 7mg (oral)</option>
+                  <option value="Rybelsus 14mg">Rybelsus® 14mg (oral)</option>
+                  <option value="Semaglutida manipulada">
+                    Semaglutida manipulada
+                  </option>
+                </optgroup>
+                <optgroup label="Tirzepatida">
+                  <option value="Mounjaro 2.5mg">Mounjaro® 2.5mg</option>
+                  <option value="Mounjaro 5mg">Mounjaro® 5mg</option>
+                  <option value="Mounjaro 7.5mg">Mounjaro® 7.5mg</option>
+                  <option value="Mounjaro 10mg">Mounjaro® 10mg</option>
+                  <option value="Mounjaro 12.5mg">Mounjaro® 12.5mg</option>
+                  <option value="Mounjaro 15mg">Mounjaro® 15mg</option>
+                  <option value="Tirzepatida manipulada">
+                    Tirzepatida manipulada
+                  </option>
+                </optgroup>
+                <optgroup label="Liraglutida">
+                  <option value="Saxenda 0.6mg">Saxenda® 0.6mg</option>
+                  <option value="Saxenda 1.2mg">Saxenda® 1.2mg</option>
+                  <option value="Saxenda 1.8mg">Saxenda® 1.8mg</option>
+                  <option value="Saxenda 2.4mg">Saxenda® 2.4mg</option>
+                  <option value="Saxenda 3mg">Saxenda® 3mg</option>
+                </optgroup>
+                <optgroup label="Outro">
+                  <option value="Outro">Outro</option>
+                </optgroup>
+              </select>
             </Field>
             <Field label="Início do uso">
               <input

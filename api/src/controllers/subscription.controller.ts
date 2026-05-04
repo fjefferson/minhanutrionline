@@ -39,20 +39,30 @@ export async function checkout(req: Request, res: Response) {
       amountBRL: PLAN_PRICE[planType],
     });
 
-    await prisma.subscription.upsert({
+    const existingSub = await prisma.subscription.findUnique({
       where: { userId: user.userId },
-      update: {
-        planId: plan.id,
-        mpSubscriptionId: mpSub.id,
-        status: "TRIALING",
-      },
-      create: {
-        userId: user.userId,
-        planId: plan.id,
-        mpSubscriptionId: mpSub.id,
-        status: "TRIALING",
-      },
     });
+
+    if (existingSub) {
+      // Usuário já tem assinatura — guarda o novo plano como pendente
+      // O planId atual NÃO é alterado até que o pagamento seja confirmado pelo webhook
+      await prisma.subscription.update({
+        where: { userId: user.userId },
+        data: {
+          pendingPlanId: plan.id,
+          mpSubscriptionId: mpSub.id,
+        },
+      });
+    } else {
+      await prisma.subscription.create({
+        data: {
+          userId: user.userId,
+          planId: plan.id,
+          mpSubscriptionId: mpSub.id,
+          status: "PENDING",
+        },
+      });
+    }
 
     res.json({ init_point: mpSub.init_point });
   } catch (err) {
@@ -87,18 +97,26 @@ export async function mpWebhook(req: Request, res: Response) {
       };
       const status = statusMap[mpSub.status ?? ""] ?? null;
       if (status) {
-        await prisma.subscription.updateMany({
+        const sub = await prisma.subscription.findFirst({
           where: { mpSubscriptionId: data.id },
-          data: { status, mpPayerId: String(mpSub.payer_id ?? "") },
+          include: { user: { select: { name: true, email: true } } },
         });
 
-        // Dispara e-mail de boas-vindas na primeira ativação
-        if (status === "ACTIVE") {
-          const sub = await prisma.subscription.findFirst({
-            where: { mpSubscriptionId: data.id },
-            include: { user: { select: { name: true, email: true } } },
+        if (sub) {
+          await prisma.subscription.update({
+            where: { id: sub.id },
+            data: {
+              status,
+              mpPayerId: String(mpSub.payer_id ?? ""),
+              // Ao confirmar pagamento, promove o plano pendente para plano ativo
+              ...(status === "ACTIVE" && sub.pendingPlanId
+                ? { planId: sub.pendingPlanId, pendingPlanId: null }
+                : {}),
+            },
           });
-          if (sub?.user) {
+
+          // Dispara e-mail de boas-vindas na primeira ativação
+          if (status === "ACTIVE" && sub.user) {
             sendWelcomeEmail({ name: sub.user.name, email: sub.user.email });
           }
         }

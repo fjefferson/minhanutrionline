@@ -8,9 +8,12 @@ import {
   getMessages,
   sendMessage,
   rateSession,
+  getUnreadCount,
 } from "../controllers/chat.controller";
 
 const router = Router();
+
+router.get("/unread-count", authenticate, getUnreadCount);
 
 router.get("/sessions", authenticate, getSessions);
 router.get("/session", authenticate, getSession);

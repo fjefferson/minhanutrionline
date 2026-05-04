@@ -7,6 +7,8 @@ import {
   changePassword,
   forgotPassword,
   resetPassword,
+  completeOnboarding,
+  uploadAvatar,
 } from "../controllers/auth.controller";
 import {
   registerValidator,
@@ -14,6 +16,7 @@ import {
 } from "../validators/auth.validator";
 import { validate } from "../middlewares/validate.middleware";
 import { authenticate } from "../middlewares/auth.middleware";
+import { avatarUpload } from "../middlewares/upload.middleware";
 
 const router = Router();
 
@@ -24,5 +27,12 @@ router.put("/me", authenticate, updateMe);
 router.put("/password", authenticate, changePassword);
 router.post("/forgot-password", forgotPassword);
 router.post("/reset-password", resetPassword);
+router.post("/onboarding-done", authenticate, completeOnboarding);
+router.post(
+  "/avatar",
+  authenticate,
+  avatarUpload.single("avatar"),
+  uploadAvatar,
+);
 
 export default router;

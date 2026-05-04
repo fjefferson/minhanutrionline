@@ -5,6 +5,7 @@ import jwt, { type SignOptions } from "jsonwebtoken";
 import { prisma } from "../lib/prisma";
 import { JWT_SECRET, JWT_EXPIRES_IN } from "../config/env";
 import { sendPasswordResetEmail } from "../services/sendpulse.service";
+import cloudinary from "../config/cloudinary";
 
 const FRONTEND_URL = process.env.FRONTEND_URL ?? "http://localhost:3000";
 
@@ -70,6 +71,7 @@ export const login = async (req: Request, res: Response): Promise<void> => {
       name: user.name,
       email: user.email,
       role: user.role,
+      avatarUrl: user.avatarUrl ?? null,
       subscription: user.subscription
         ? {
             status: user.subscription.status,
@@ -108,7 +110,7 @@ export const updateMe = async (
   const updated = await prisma.user.update({
     where: { id: req.user!.userId },
     data: { ...(name && { name }), ...(email && { email }) },
-    select: { id: true, name: true, email: true, role: true },
+    select: { id: true, name: true, email: true, role: true, avatarUrl: true },
   });
 
   res.json(updated);
@@ -165,6 +167,8 @@ export const me = async (
       name: true,
       email: true,
       role: true,
+      onboardingDone: true,
+      avatarUrl: true,
       subscription: {
         select: {
           status: true,
@@ -180,6 +184,17 @@ export const me = async (
   }
 
   res.json(user);
+};
+
+export const completeOnboarding = async (
+  req: Request & { user?: { userId: string } },
+  res: Response,
+): Promise<void> => {
+  await prisma.user.update({
+    where: { id: req.user!.userId },
+    data: { onboardingDone: true },
+  });
+  res.json({ ok: true });
 };
 
 export const forgotPassword = async (
@@ -257,4 +272,32 @@ export const resetPassword = async (
   });
 
   res.json({ message: "Senha redefinida com sucesso!" });
+};
+
+export const uploadAvatar = async (
+  req: Request & { user?: { userId: string }; file?: Express.Multer.File },
+  res: Response,
+): Promise<void> => {
+  if (!req.file) {
+    res.status(400).json({ message: "Nenhum arquivo enviado" });
+    return;
+  }
+
+  const dataUri = `data:${req.file.mimetype};base64,${req.file.buffer.toString("base64")}`;
+
+  const result = await cloudinary.uploader.upload(dataUri, {
+    folder: "avatars",
+    transformation: [
+      { width: 256, height: 256, crop: "fill", gravity: "face" },
+    ],
+    resource_type: "image",
+  });
+
+  const updated = await prisma.user.update({
+    where: { id: req.user!.userId },
+    data: { avatarUrl: result.secure_url },
+    select: { avatarUrl: true },
+  });
+
+  res.json({ avatarUrl: updated.avatarUrl });
 };

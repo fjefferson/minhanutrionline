@@ -6,6 +6,8 @@ interface User {
   name: string;
   email: string;
   role: "USER" | "ADMIN";
+  avatarUrl?: string | null;
+  onboardingDone?: boolean;
   subscription?: {
     status: string;
     plan: { type: string; name: string };
@@ -20,6 +22,8 @@ interface AuthState {
   isAuthenticated: () => boolean;
   hasActivePlan: () => boolean;
   planType: () => string | null;
+  markOnboardingDone: () => void;
+  setAvatar: (url: string) => void;
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -37,7 +41,18 @@ export const useAuthStore = create<AuthState>()(
       },
       isAuthenticated: () => !!get().token,
       hasActivePlan: () => get().user?.subscription?.status === "ACTIVE",
-      planType: () => get().user?.subscription?.plan?.type ?? null,
+      planType: () =>
+        get().user?.subscription?.status === "ACTIVE"
+          ? (get().user?.subscription?.plan?.type ?? null)
+          : null,
+      markOnboardingDone: () => {
+        const u = get().user;
+        if (u) set({ user: { ...u, onboardingDone: true } });
+      },
+      setAvatar: (url: string) => {
+        const u = get().user;
+        if (u) set({ user: { ...u, avatarUrl: url } });
+      },
     }),
     {
       name: "auth-storage",

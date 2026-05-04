@@ -1,4 +1,5 @@
 import "dotenv/config";
+import bcrypt from "bcryptjs";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@prisma/client";
 
@@ -27,20 +28,39 @@ async function main() {
     {
       type: "BASIC" as const,
       name: "GLP-1 Basic",
-      description: "Orientações por IA ilimitadas",
-      priceInCents: 1990,
+      description: "Suporte nutricional educativo com tecnologia",
+      priceInCents: 1490,
+      features: [
+        "Controle de sintomas e efeitos colaterais",
+        "Acesso ao conteúdo educativo",
+      ],
     },
     {
       type: "PLUS" as const,
       name: "GLP-1 Plus",
-      description: "Orientações por IA + chat com nutricionista",
+      description: "Acompanhamento com suporte nutricional",
       priceInCents: 4990,
+      features: [
+        "Tudo do plano Basic",
+        "Chat direto com a nutricionista",
+        "Respostas em até 24h úteis",
+        "Acompanhamento personalizado",
+        "Ajustes de cardápio sob demanda",
+      ],
     },
     {
       type: "PREMIUM" as const,
       name: "GLP-1 Premium",
       description: "Tudo do Plus + plano alimentar personalizado",
       priceInCents: 14990,
+      features: [
+        "Tudo do plano Plus",
+        "Plano alimentar 100% personalizado",
+        "Consulta de retorno mensal",
+        "Prioridade no atendimento",
+        "Suporte para reajuste de dose",
+        "Relatório de evolução mensal",
+      ],
     },
   ];
 
@@ -51,6 +71,8 @@ async function main() {
         name: p.name,
         description: p.description,
         priceInCents: p.priceInCents,
+        features: p.features,
+        active: true,
       },
       create: { ...p, productId: product.id, active: true },
     });
@@ -81,8 +103,36 @@ async function main() {
     });
     console.log("Symptom:", symptom.slug);
   }
+
+  await seedAdmin();
 }
 
 main()
   .catch(console.error)
   .finally(() => prisma.$disconnect());
+
+async function seedAdmin() {
+  const email = process.env["ADMIN_EMAIL"];
+  const password = process.env["ADMIN_PASSWORD"];
+
+  if (!email || !password) {
+    console.warn(
+      "⚠️  ADMIN_EMAIL ou ADMIN_PASSWORD não definidos no .env — admin não criado.",
+    );
+    return;
+  }
+
+  const hash = await bcrypt.hash(password, 10);
+  const admin = await prisma.user.upsert({
+    where: { email },
+    update: {},
+    create: {
+      name: "Elane Oliveira",
+      email,
+      password: hash,
+      role: "ADMIN",
+      onboardingDone: true,
+    },
+  });
+  console.log("Admin:", admin.email);
+}

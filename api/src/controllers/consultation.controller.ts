@@ -1,6 +1,7 @@
 import { Response } from "express";
 import { prisma } from "../lib/prisma";
 import { AuthenticatedRequest } from "../middlewares/auth.middleware";
+import { sendConsultationConfirmedEmail } from "../services/sendpulse.service";
 
 // Brazil = UTC-3, so UTC = Brazil + 3
 const BRAZIL_OFFSET_H = 3;
@@ -30,8 +31,9 @@ async function getConfig() {
 
 /** Is a given UTC date on a non-business day (uses config.bizDays)? */
 function isBizDay(utcDate: Date, bizDays: number[]): boolean {
-  const bz = new Date(utcDate.getTime() - BRAZIL_OFFSET_H * 3600_000);
-  return bizDays.includes(bz.getUTCDay());
+  // utcDate is UTC midnight of the Brazil calendar date (built from "YYYY-MM-DDT00:00:00.000Z")
+  // getUTCDay() returns the correct day-of-week for that Brazil date directly
+  return bizDays.includes(utcDate.getUTCDay());
 }
 
 function brazilHourToUTC(brazilHour: number): number {
@@ -457,7 +459,30 @@ export const adminUpdateConsultation = async (
     data.scheduledAt = newScheduledAt;
   }
 
+  const wasConfirmed =
+    consultation.status !== "CONFIRMED" && status === "CONFIRMED";
+
   const updated = await prisma.consultation.update({ where: { id }, data });
+
+  // Notifica paciente ao confirmar consulta
+  if (wasConfirmed) {
+    prisma.user
+      .findUnique({
+        where: { id: consultation.userId },
+        select: { name: true, email: true },
+      })
+      .then((patient) => {
+        if (patient) {
+          sendConsultationConfirmedEmail(
+            patient,
+            updated.scheduledAt,
+            updated.meetingLink ?? null,
+          );
+        }
+      })
+      .catch(() => {});
+  }
+
   return res.json(updated);
 };
 

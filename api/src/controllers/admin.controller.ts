@@ -323,7 +323,7 @@ export async function deleteSymptom(req: Request, res: Response) {
 export async function getAdminChatSessions(req: Request, res: Response) {
   const sessions = await prisma.chatSession.findMany({
     include: {
-      user: { select: { id: true, name: true, email: true } },
+      user: { select: { id: true, name: true, email: true, avatarUrl: true } },
       messages: { orderBy: { createdAt: "desc" }, take: 1 },
     },
     orderBy: { createdAt: "desc" },

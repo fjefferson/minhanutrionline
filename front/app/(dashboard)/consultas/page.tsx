@@ -472,7 +472,7 @@ export default function ConsultasPage() {
                 disabled={bookingHour === null || booking}
                 className="w-full bg-green-600 text-white py-2.5 rounded-xl font-medium text-sm hover:bg-green-700 disabled:opacity-40 disabled:cursor-not-allowed transition"
               >
-                {booking ? "Agendando..." : "Confirmar agendamento"}
+                {booking ? "Agendando..." : "Solicitar agendamento"}
               </button>
             </>
           )}
