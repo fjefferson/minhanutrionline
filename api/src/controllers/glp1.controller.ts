@@ -74,6 +74,7 @@ export async function createReport(req: AuthenticatedRequest, res: Response) {
   const user = await prisma.user.findUnique({
     where: { id: userId },
     select: {
+      name: true,
       freeAiUsed: true,
       subscription: { select: { status: true } },
     },

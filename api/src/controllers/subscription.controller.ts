@@ -110,7 +110,7 @@ export async function getMySubscription(req: Request, res: Response) {
           },
           include: { plan: true },
         });
-        if (sub.user || true) {
+        {
           const dbUser = await prisma.user.findUnique({
             where: { id: user.userId },
             select: { name: true, email: true },
