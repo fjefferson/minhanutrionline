@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
+import Script from "next/script";
 import { Toaster } from "sonner";
 import "./globals.css";
 
@@ -90,6 +91,19 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="pt-BR" className="h-full">
+      <Script
+        async
+        src="https://www.googletagmanager.com/gtag/js?id=G-BL11SHHS3J"
+        strategy="afterInteractive"
+      />
+      <Script id="google-analytics" strategy="afterInteractive">
+        {`
+          window.dataLayer = window.dataLayer || [];
+          function gtag(){dataLayer.push(arguments);}
+          gtag('js', new Date());
+          gtag('config', 'G-BL11SHHS3J');
+        `}
+      </Script>
       <body
         suppressHydrationWarning
         className={`${inter.className} min-h-full bg-gray-50 antialiased`}

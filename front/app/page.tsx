@@ -23,8 +23,7 @@ export const metadata: Metadata = {
     canonical: "https://minhanutrionline.com.br",
   },
   openGraph: {
-    title:
-      "Acompanhamento Nutricional para GLP-1 — Ozempic, Wegovy, Mounjaro",
+    title: "Acompanhamento Nutricional para GLP-1 — Ozempic, Wegovy, Mounjaro",
     description:
       "Plataforma criada pela nutricionista Elane Oliveira (CRN-14533). Controle de sintomas, plano alimentar personalizado e consultas online para quem usa canetas emagrecedoras.",
     url: "https://minhanutrionline.com.br",

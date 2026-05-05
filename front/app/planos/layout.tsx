@@ -8,7 +8,8 @@ export const metadata: Metadata = {
     canonical: "https://minhanutrionline.com.br/planos",
   },
   openGraph: {
-    title: "Planos de Acompanhamento Nutricional para GLP-1 | MinhaNutri Online",
+    title:
+      "Planos de Acompanhamento Nutricional para GLP-1 | MinhaNutri Online",
     description:
       "Planos mensais com suporte nutricional especializado para tratamento com canetas emagrecedoras GLP-1. Ozempic, Wegovy e Mounjaro.",
     url: "https://minhanutrionline.com.br/planos",
