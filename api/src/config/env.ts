@@ -14,8 +14,6 @@ export const PORT = process.env.PORT ?? "3001";
 export const NODE_ENV = process.env.NODE_ENV ?? "development";
 export const FRONTEND_URL = process.env.FRONTEND_URL ?? "http://localhost:3000";
 export const OPENAI_API_KEY = process.env.OPENAI_API_KEY ?? "";
-export const MP_ACCESS_TOKEN = process.env.MP_ACCESS_TOKEN ?? "";
-export const MP_WEBHOOK_SECRET = process.env.MP_WEBHOOK_SECRET ?? "";
-export const MP_BACK_URL =
-  process.env.MP_BACK_URL ?? "https://minhanutrionline.com.br/checkout/success";
-export const MP_TEST_PAYER_EMAIL = process.env.MP_TEST_PAYER_EMAIL ?? "";
+export const ASAAS_API_KEY = process.env.ASAAS_API_KEY ?? "";
+export const ASAAS_BASE_URL =
+  process.env.ASAAS_BASE_URL ?? "https://sandbox.asaas.com/api/v3";

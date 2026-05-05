@@ -8,8 +8,12 @@ interface User {
   role: "USER" | "ADMIN";
   avatarUrl?: string | null;
   onboardingDone?: boolean;
+  emailVerified?: boolean;
   subscription?: {
     status: string;
+    cancelScheduledAt?: string | null;
+    currentPeriodStart?: string | null;
+    currentPeriodEnd?: string | null;
     plan: { type: string; name: string };
   };
 }

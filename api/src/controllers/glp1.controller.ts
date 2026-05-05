@@ -5,6 +5,32 @@ import { generateNutritionalGuidance } from "../services/openai.service";
 
 const GLP1_SLUG = "glp-1";
 
+// GET /glp1/free-status — retorna quantas orientações gratuitas o usuário usou
+export async function getFreeStatus(req: AuthenticatedRequest, res: Response) {
+  const FREE_AI_LIMIT = 3;
+  const userId = req.user!.userId;
+
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: {
+      freeAiUsed: true,
+      subscription: { select: { status: true } },
+    },
+  });
+
+  const hasActivePlan = user?.subscription?.status === "ACTIVE";
+  const freeAiUsed = user?.freeAiUsed ?? 0;
+
+  res.json({
+    hasActivePlan,
+    freeAiUsed,
+    freeAiLimit: FREE_AI_LIMIT,
+    freeAiRemaining: hasActivePlan
+      ? null
+      : Math.max(0, FREE_AI_LIMIT - freeAiUsed),
+  });
+}
+
 export async function getSymptoms(req: AuthenticatedRequest, res: Response) {
   const product = await prisma.product.findUnique({
     where: { slug: GLP1_SLUG },
@@ -41,6 +67,31 @@ export async function createReport(req: AuthenticatedRequest, res: Response) {
       .status(400)
       .json({ message: "symptoms é obrigatório e deve ser um array" });
     return;
+  }
+
+  // Verifica se tem plano ativo ou créditos gratuitos
+  const FREE_AI_LIMIT = 3;
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: {
+      freeAiUsed: true,
+      subscription: { select: { status: true } },
+    },
+  });
+
+  const hasActivePlan = user?.subscription?.status === "ACTIVE";
+
+  if (!hasActivePlan) {
+    const used = user?.freeAiUsed ?? 0;
+    if (used >= FREE_AI_LIMIT) {
+      res.status(403).json({
+        message: "Limite de orientações gratuitas atingido",
+        code: "FREE_LIMIT_REACHED",
+        freeAiUsed: used,
+        freeAiLimit: FREE_AI_LIMIT,
+      });
+      return;
+    }
   }
 
   const product = await prisma.product.findUnique({
@@ -101,6 +152,14 @@ export async function createReport(req: AuthenticatedRequest, res: Response) {
       symptoms: { include: { symptom: true } },
     },
   });
+
+  // Incrementa uso gratuito se não tem plano ativo
+  if (!hasActivePlan) {
+    await prisma.user.update({
+      where: { id: userId },
+      data: { freeAiUsed: { increment: 1 } },
+    });
+  }
 
   res.status(201).json(report);
 }

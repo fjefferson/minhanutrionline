@@ -273,8 +273,10 @@ export default function ConsultasPage() {
       new Date(c.scheduledAt) <= new Date(),
   );
 
+  const todayStr = TODAY.toLocaleDateString("en-CA");
+
   return (
-    <div className="max-w-5xl mx-auto px-4 py-8 space-y-8">
+    <div className="max-w-5xl mx-auto px-4 py-8 space-y-6">
       <ConfirmDialog
         open={!!cancelConfirm}
         title="Cancelar consulta?"
@@ -314,168 +316,317 @@ export default function ConsultasPage() {
         </div>
       )}
 
-      <div className="grid md:grid-cols-2 gap-6">
-        {/* CALENDAR */}
-        <div className="bg-white rounded-2xl border border-gray-200 p-5">
-          <div className="flex items-center justify-between mb-4">
-            <button
-              type="button"
-              onClick={prevMonth}
-              disabled={
-                calYear === TODAY.getFullYear() && calMonth === TODAY.getMonth()
-              }
-              className="flex items-center justify-center w-8 h-8 rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-100 hover:border-gray-300 transition disabled:opacity-25 disabled:cursor-not-allowed"
+      {/* Eligibility banner — shown when user cannot book yet */}
+      {eligibility && !eligibility.canBook && (
+        <div className="flex items-start gap-3 bg-blue-50 border border-blue-200 rounded-xl px-4 py-4">
+          <CalendarDays size={20} className="text-blue-500 shrink-0 mt-0.5" />
+          <div className="flex-1 text-sm">
+            <p className="font-semibold text-blue-900">
+              Agendamento ainda não disponível
+            </p>
+            <p className="text-blue-700 mt-1">{eligibility.reason}</p>
+            <p className="text-blue-600 text-xs mt-1">
+              Disponível a partir de{" "}
+              <strong>
+                {new Date(
+                  eligibility.earliestDate + "T12:00:00Z",
+                ).toLocaleDateString("pt-BR", {
+                  day: "numeric",
+                  month: "long",
+                  year: "numeric",
+                })}
+              </strong>
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* ── BOOKING SECTION ─────────────────────────────────────────── */}
+      <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
+        {/* Steps indicator */}
+        <div className="flex items-center gap-2 px-5 py-3.5 border-b border-gray-100 bg-gray-50/60">
+          <div
+            className={`flex items-center gap-1.5 text-xs font-semibold ${!selectedDate ? "text-green-700" : "text-gray-400"}`}
+          >
+            <span
+              className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold ${!selectedDate ? "bg-green-600 text-white" : "bg-gray-200 text-gray-500"}`}
             >
-              <ChevronLeft size={16} />
-            </button>
-            <span className="font-semibold text-gray-900 text-sm">
-              {MONTH_NAMES[calMonth]} {calYear}
+              1
             </span>
-            <button
-              type="button"
-              onClick={nextMonth}
-              className="flex items-center justify-center w-8 h-8 rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-100 hover:border-gray-300 transition"
+            Escolher data
+          </div>
+          <ChevronRight size={13} className="text-gray-300" />
+          <div
+            className={`flex items-center gap-1.5 text-xs font-semibold ${selectedDate && bookingHour === null ? "text-green-700" : "text-gray-400"}`}
+          >
+            <span
+              className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold ${selectedDate && bookingHour === null ? "bg-green-600 text-white" : selectedDate ? "bg-gray-200 text-gray-500" : "bg-gray-100 text-gray-300"}`}
             >
-              <ChevronRight size={16} />
-            </button>
-          </div>
-
-          {/* Days of week header */}
-          <div className="grid grid-cols-7 mb-1">
-            {DOW_LABELS.map((d) => (
-              <div
-                key={d}
-                className="text-center text-xs font-medium text-gray-400 py-1"
-              >
-                {d}
-              </div>
-            ))}
-          </div>
-
-          {/* Days grid */}
-          <div className="grid grid-cols-7 gap-0.5">
-            {Array.from({ length: firstDayOfMonth }).map((_, i) => (
-              <div key={`empty-${i}`} />
-            ))}
-            {Array.from({ length: daysInMonth }, (_, i) => i + 1).map((day) => {
-              const dateStr = calDateStr(day);
-              const isBlocked = blockedDates.has(dateStr);
-              const disabled =
-                !isBizDay(day) ||
-                isBeforeToday(day) ||
-                isBeforeEarliestDate(day) ||
-                isBlocked;
-              const isBooked = bookedDates.has(dateStr);
-              const isSelected = selectedDate === dateStr;
-
-              return (
-                <button
-                  key={day}
-                  disabled={disabled || isBooked}
-                  onClick={() => setSelectedDate(isSelected ? null : dateStr)}
-                  className={`
-                    aspect-square text-sm rounded-lg font-medium transition-all
-                    ${isSelected ? "bg-green-600 text-white" : ""}
-                    ${isBooked && !isSelected ? "bg-green-100 text-green-700 cursor-default" : ""}
-                    ${isBlocked && !isSelected ? "bg-red-50 text-red-300 cursor-not-allowed" : ""}
-                    ${
-                      !disabled && !isBooked && !isSelected
-                        ? "hover:bg-green-50 text-gray-800"
-                        : ""
-                    }
-                    ${disabled && !isBlocked ? "text-gray-300 cursor-not-allowed" : ""}
-                  `}
-                >
-                  {day}
-                </button>
-              );
-            })}
-          </div>
-
-          <div className="mt-3 flex items-center gap-4 text-xs text-gray-400">
-            <span className="flex items-center gap-1">
-              <span className="w-3 h-3 rounded bg-green-100 inline-block" /> Já
-              agendado
+              2
             </span>
-            <span className="flex items-center gap-1">
-              <span className="w-3 h-3 rounded bg-red-50 border border-red-200 inline-block" />{" "}
-              Bloqueado
+            Escolher horário
+          </div>
+          <ChevronRight size={13} className="text-gray-300" />
+          <div
+            className={`flex items-center gap-1.5 text-xs font-semibold ${bookingHour !== null ? "text-green-700" : "text-gray-400"}`}
+          >
+            <span
+              className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold ${bookingHour !== null ? "bg-green-600 text-white" : "bg-gray-100 text-gray-300"}`}
+            >
+              3
             </span>
-            <span className="flex items-center gap-1">
-              <span className="w-3 h-3 rounded bg-green-600 inline-block" />{" "}
-              Selecionado
-            </span>
+            Confirmar
           </div>
         </div>
 
-        {/* SLOT PICKER */}
-        <div className="bg-white rounded-2xl border border-gray-200 p-5">
-          {!selectedDate ? (
-            <div className="h-full flex flex-col items-center justify-center text-center text-gray-400 py-8">
-              <CalendarDays size={36} className="mb-3 opacity-40" />
-              <p className="text-sm">
-                Selecione um dia no calendário para ver os horários disponíveis
-              </p>
+        <div className="grid md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-gray-100">
+          {/* ── CALENDAR ── hidden on mobile when a date is selected */}
+          <div className={`p-5 ${selectedDate ? "hidden md:block" : ""}`}>
+            <div className="flex items-center justify-between mb-4">
+              <button
+                type="button"
+                onClick={prevMonth}
+                disabled={
+                  calYear === TODAY.getFullYear() &&
+                  calMonth === TODAY.getMonth()
+                }
+                className="flex items-center justify-center w-8 h-8 rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-100 hover:border-gray-300 transition disabled:opacity-20 disabled:cursor-not-allowed"
+              >
+                <ChevronLeft size={16} />
+              </button>
+              <span className="font-semibold text-gray-900 text-sm select-none">
+                {MONTH_NAMES[calMonth]} {calYear}
+              </span>
+              <button
+                type="button"
+                onClick={nextMonth}
+                className="flex items-center justify-center w-8 h-8 rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-100 hover:border-gray-300 transition"
+              >
+                <ChevronRight size={16} />
+              </button>
             </div>
-          ) : (
-            <>
-              <div className="mb-4">
-                <p className="font-semibold text-gray-900">
-                  {new Date(selectedDate + "T12:00:00Z").toLocaleDateString(
-                    "pt-BR",
-                    {
-                      weekday: "long",
-                      day: "numeric",
-                      month: "long",
-                    },
-                  )}
+
+            {/* Days of week header */}
+            <div className="grid grid-cols-7 mb-1">
+              {DOW_LABELS.map((d) => (
+                <div
+                  key={d}
+                  className="text-center text-xs font-medium text-gray-400 py-1 select-none"
+                >
+                  {d}
+                </div>
+              ))}
+            </div>
+
+            {/* Days grid */}
+            <div className="grid grid-cols-7 gap-1">
+              {Array.from({ length: firstDayOfMonth }).map((_, i) => (
+                <div key={`empty-${i}`} />
+              ))}
+              {Array.from({ length: daysInMonth }, (_, i) => i + 1).map(
+                (day) => {
+                  const dateStr = calDateStr(day);
+                  const isToday = dateStr === todayStr;
+                  const isBlocked = blockedDates.has(dateStr);
+                  const isBooked = bookedDates.has(dateStr);
+                  const isSelected = selectedDate === dateStr;
+                  const disabled =
+                    !isBizDay(day) ||
+                    isBeforeToday(day) ||
+                    isBeforeEarliestDate(day) ||
+                    isBlocked;
+                  const available = !disabled && !isBooked;
+
+                  return (
+                    <button
+                      key={day}
+                      type="button"
+                      disabled={disabled || isBooked}
+                      onClick={() =>
+                        setSelectedDate(isSelected ? null : dateStr)
+                      }
+                      title={
+                        isBooked
+                          ? "Já agendado"
+                          : isBlocked
+                            ? "Data bloqueada"
+                            : disabled
+                              ? "Indisponível"
+                              : undefined
+                      }
+                      className={[
+                        "relative h-10 w-full flex items-center justify-center rounded-lg text-sm font-medium transition-all select-none",
+                        isSelected
+                          ? "bg-green-600 text-white shadow-sm"
+                          : isBooked
+                            ? "bg-green-100 text-green-700 cursor-default"
+                            : isBlocked
+                              ? "bg-red-50 text-red-300 cursor-not-allowed"
+                              : available
+                                ? "text-gray-800 hover:bg-green-50 hover:text-green-700 cursor-pointer"
+                                : "text-gray-300 cursor-not-allowed",
+                        isToday && !isSelected
+                          ? "ring-2 ring-green-400 ring-offset-1"
+                          : "",
+                      ]
+                        .filter(Boolean)
+                        .join(" ")}
+                    >
+                      {day}
+                      {isToday && !isSelected && (
+                        <span className="absolute bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-green-500" />
+                      )}
+                    </button>
+                  );
+                },
+              )}
+            </div>
+
+            {/* Legend */}
+            <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-gray-400 border-t border-gray-50 pt-4">
+              <span className="flex items-center gap-1.5">
+                <span className="w-3 h-3 rounded-md bg-green-50 ring-2 ring-green-400 inline-block" />
+                Hoje
+              </span>
+              <span className="flex items-center gap-1.5">
+                <span className="w-3 h-3 rounded-md bg-green-600 inline-block" />
+                Selecionado
+              </span>
+              <span className="flex items-center gap-1.5">
+                <span className="w-3 h-3 rounded-md bg-green-100 inline-block" />
+                Já agendado
+              </span>
+              <span className="flex items-center gap-1.5">
+                <span className="w-3 h-3 rounded-md bg-red-50 border border-red-200 inline-block" />
+                Bloqueado
+              </span>
+            </div>
+          </div>
+
+          {/* ── SLOT PICKER ── hidden on mobile when no date selected */}
+          <div className={`p-5 ${!selectedDate ? "hidden md:block" : ""}`}>
+            {!selectedDate ? (
+              <div className="h-full flex flex-col items-center justify-center text-center text-gray-400 py-10 min-h-[300px]">
+                <CalendarDays
+                  size={40}
+                  className="mb-3 opacity-25 text-green-500"
+                />
+                <p className="text-sm font-medium text-gray-500">
+                  Nenhuma data selecionada
                 </p>
-                <p className="text-xs text-gray-500 mt-0.5">
-                  Horário de Brasília — selecione um horário
+                <p className="text-xs mt-1 text-gray-400">
+                  Clique em um dia disponível no calendário ao lado
                 </p>
               </div>
-
-              {slotsLoading ? (
-                <p className="text-sm text-gray-400">Carregando horários...</p>
-              ) : slots.length === 0 ? (
-                <p className="text-sm text-gray-500">
-                  Nenhum horário disponível para este dia.
-                </p>
-              ) : (
-                <div className="grid grid-cols-3 gap-2 mb-4">
-                  {slots.map((h) => (
-                    <button
-                      key={h}
-                      onClick={() =>
-                        setBookingHour(bookingHour === h ? null : h)
-                      }
-                      className={`py-2 rounded-lg text-sm font-medium border transition-all
-                        ${
-                          bookingHour === h
-                            ? "bg-green-600 text-white border-green-600"
-                            : "border-gray-200 text-gray-700 hover:border-green-400 hover:text-green-700"
-                        }`}
-                    >
-                      <Clock size={12} className="inline mr-1 -mt-0.5" />
-                      {String(h).padStart(2, "0")}:00
-                    </button>
-                  ))}
+            ) : (
+              <div className="flex flex-col h-full">
+                {/* Selected date header */}
+                <div className="flex items-center gap-2 mb-5">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedDate(null);
+                      setBookingHour(null);
+                    }}
+                    className="w-7 h-7 rounded-lg border border-gray-200 flex items-center justify-center hover:bg-gray-50 text-gray-400 shrink-0 transition"
+                  >
+                    <ChevronLeft size={14} />
+                  </button>
+                  <div>
+                    <p className="font-semibold text-gray-900 capitalize text-sm leading-tight">
+                      {new Date(selectedDate + "T12:00:00Z").toLocaleDateString(
+                        "pt-BR",
+                        {
+                          weekday: "long",
+                          day: "numeric",
+                          month: "long",
+                        },
+                      )}
+                    </p>
+                    <p className="text-xs text-gray-400 mt-0.5">
+                      Horário de Brasília (UTC-3)
+                    </p>
+                  </div>
                 </div>
-              )}
 
-              {bookError && (
-                <p className="text-sm text-red-600 mb-3">{bookError}</p>
-              )}
+                {slotsLoading ? (
+                  <div className="grid grid-cols-3 gap-2">
+                    {Array.from({ length: 6 }).map((_, i) => (
+                      <div
+                        key={i}
+                        className="h-11 rounded-xl bg-gray-100 animate-pulse"
+                      />
+                    ))}
+                  </div>
+                ) : slots.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center text-center py-10 text-gray-400">
+                    <Clock size={28} className="mb-2 opacity-30" />
+                    <p className="text-sm font-medium">
+                      Sem horários disponíveis
+                    </p>
+                    <p className="text-xs mt-1">Tente selecionar outra data</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-3 gap-2">
+                    {slots.map((h) => (
+                      <button
+                        key={h}
+                        type="button"
+                        onClick={() =>
+                          setBookingHour(bookingHour === h ? null : h)
+                        }
+                        className={[
+                          "h-11 rounded-xl text-sm font-medium border transition-all flex items-center justify-center gap-1",
+                          bookingHour === h
+                            ? "bg-green-600 text-white border-green-600 shadow-sm"
+                            : "border-gray-200 text-gray-700 hover:border-green-400 hover:bg-green-50 hover:text-green-700",
+                        ].join(" ")}
+                      >
+                        <Clock size={12} className="-mt-px shrink-0" />
+                        {String(h).padStart(2, "0")}:00
+                      </button>
+                    ))}
+                  </div>
+                )}
 
-              <button
-                onClick={handleBook}
-                disabled={bookingHour === null || booking}
-                className="w-full bg-green-600 text-white py-2.5 rounded-xl font-medium text-sm hover:bg-green-700 disabled:opacity-40 disabled:cursor-not-allowed transition"
-              >
-                {booking ? "Agendando..." : "Solicitar agendamento"}
-              </button>
-            </>
-          )}
+                {/* Summary card */}
+                {bookingHour !== null && (
+                  <div className="mt-4 bg-green-50 border border-green-100 rounded-xl p-4">
+                    <p className="text-xs text-green-700 font-semibold mb-1 uppercase tracking-wide">
+                      Resumo
+                    </p>
+                    <p className="text-sm font-bold text-gray-900">
+                      {new Date(selectedDate + "T12:00:00Z").toLocaleDateString(
+                        "pt-BR",
+                        {
+                          weekday: "short",
+                          day: "numeric",
+                          month: "short",
+                        },
+                      )}{" "}
+                      às {String(bookingHour).padStart(2, "0")}:00
+                    </p>
+                    <p className="text-xs text-gray-500 mt-0.5">
+                      Consulta com a nutricionista · Online
+                    </p>
+                  </div>
+                )}
+
+                {bookError && (
+                  <p className="text-sm text-red-600 mt-3">{bookError}</p>
+                )}
+
+                <button
+                  type="button"
+                  onClick={handleBook}
+                  disabled={bookingHour === null || booking}
+                  className="mt-4 w-full bg-green-600 text-white py-3 rounded-xl font-semibold text-sm hover:bg-green-700 disabled:opacity-40 disabled:cursor-not-allowed transition shadow-sm"
+                >
+                  {booking ? "Agendando..." : "Solicitar agendamento"}
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -523,14 +674,15 @@ export default function ConsultasPage() {
                 {new Date(c.scheduledAt).getTime() - Date.now() >
                 publicConfig.cancelDays * 86_400_000 ? (
                   <button
+                    type="button"
                     onClick={() => setCancelConfirm(c.id)}
                     disabled={cancelling && cancelConfirm === c.id}
-                    className="text-red-400 hover:text-red-600 text-xs shrink-0 flex items-center gap-1 disabled:opacity-50"
+                    className="text-red-400 hover:text-red-600 text-xs shrink-0 flex items-center gap-1 disabled:opacity-50 transition"
                   >
                     <X size={14} /> Cancelar
                   </button>
                 ) : (
-                  <span className="text-xs text-gray-400 shrink-0 text-right">
+                  <span className="text-xs text-gray-400 shrink-0 text-right leading-relaxed">
                     Cancelamento
                     <br />
                     indisponível
@@ -581,7 +733,7 @@ export default function ConsultasPage() {
         </div>
       )}
 
-      {!loading && consultations.length === 0 && (
+      {!loading && consultations.length === 0 && upcoming.length === 0 && (
         <div className="text-center py-12 text-gray-400">
           <CalendarDays size={40} className="mx-auto mb-3 opacity-30" />
           <p className="text-sm">

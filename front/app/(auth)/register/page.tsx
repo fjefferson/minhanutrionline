@@ -152,7 +152,7 @@ export default function RegisterPage() {
     await api.put("/profile/nutritional", payload);
   };
 
-  const goToPlanos = () => router.push("/planos");
+  const goToVerifyEmail = () => router.push("/verificar-email");
 
   const handleStep2Next = async () => {
     setStep2Error("");
@@ -180,7 +180,7 @@ export default function RegisterPage() {
     } finally {
       setSaving(false);
     }
-    goToPlanos();
+    goToVerifyEmail();
   };
 
   // ── Conteúdo lateral direito por step ─────────────────────────────────────
@@ -649,7 +649,7 @@ export default function RegisterPage() {
                 )}
               </button>
               <button
-                onClick={goToPlanos}
+                onClick={goToVerifyEmail}
                 className="px-4 py-3 rounded-xl text-sm font-medium text-gray-400 hover:text-gray-600 border border-gray-200 hover:border-gray-300 transition-colors"
               >
                 Pular

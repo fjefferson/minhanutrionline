@@ -4,7 +4,11 @@ import crypto from "crypto";
 import jwt, { type SignOptions } from "jsonwebtoken";
 import { prisma } from "../lib/prisma";
 import { JWT_SECRET, JWT_EXPIRES_IN } from "../config/env";
-import { sendPasswordResetEmail } from "../services/sendpulse.service";
+import {
+  sendPasswordResetEmail,
+  sendVerificationEmail,
+} from "../services/sendpulse.service";
+import { cancelAsaasSubscription } from "../services/asaas.service";
 import cloudinary from "../config/cloudinary";
 
 const FRONTEND_URL = process.env.FRONTEND_URL ?? "http://localhost:3000";
@@ -19,9 +23,25 @@ export const register = async (req: Request, res: Response): Promise<void> => {
   }
 
   const hashed = await bcrypt.hash(password, 12);
+  const verifyToken = crypto.randomBytes(32).toString("hex");
+  const verifyExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24h
+
   const user = await prisma.user.create({
-    data: { name, email, password: hashed },
-    select: { id: true, name: true, email: true, role: true, createdAt: true },
+    data: {
+      name,
+      email,
+      password: hashed,
+      emailVerifyToken: verifyToken,
+      emailVerifyExpiry: verifyExpiry,
+    },
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      role: true,
+      createdAt: true,
+      emailVerified: true,
+    },
   });
 
   const signOptions: SignOptions = {
@@ -32,6 +52,13 @@ export const register = async (req: Request, res: Response): Promise<void> => {
     JWT_SECRET,
     signOptions,
   );
+
+  const verifyLink = `${FRONTEND_URL}/confirmar-email?token=${verifyToken}`;
+  // Fire-and-forget — não bloqueia o registro
+  sendVerificationEmail(
+    { name: user.name, email: user.email },
+    verifyLink,
+  ).catch(() => {});
 
   res.status(201).json({ user, token });
 };
@@ -56,6 +83,15 @@ export const login = async (req: Request, res: Response): Promise<void> => {
     return;
   }
 
+  if (!user.emailVerified && user.role !== "ADMIN") {
+    res.status(403).json({
+      code: "EMAIL_NOT_VERIFIED",
+      message:
+        "Confirme seu e-mail antes de entrar. Verifique sua caixa de entrada.",
+    });
+    return;
+  }
+
   const signOptions: SignOptions = {
     expiresIn: JWT_EXPIRES_IN as SignOptions["expiresIn"],
   };
@@ -72,6 +108,7 @@ export const login = async (req: Request, res: Response): Promise<void> => {
       email: user.email,
       role: user.role,
       avatarUrl: user.avatarUrl ?? null,
+      emailVerified: user.emailVerified,
       subscription: user.subscription
         ? {
             status: user.subscription.status,
@@ -90,26 +127,16 @@ export const updateMe = async (
   req: Request & { user?: { userId: string } },
   res: Response,
 ): Promise<void> => {
-  const { name, email } = req.body;
+  const { name } = req.body;
 
-  if (!name && !email) {
+  if (!name) {
     res.status(400).json({ message: "Nada para atualizar" });
     return;
   }
 
-  if (email) {
-    const existing = await prisma.user.findFirst({
-      where: { email, NOT: { id: req.user!.userId } },
-    });
-    if (existing) {
-      res.status(409).json({ message: "E-mail já está em uso" });
-      return;
-    }
-  }
-
   const updated = await prisma.user.update({
     where: { id: req.user!.userId },
-    data: { ...(name && { name }), ...(email && { email }) },
+    data: { name },
     select: { id: true, name: true, email: true, role: true, avatarUrl: true },
   });
 
@@ -169,9 +196,13 @@ export const me = async (
       role: true,
       onboardingDone: true,
       avatarUrl: true,
+      emailVerified: true,
       subscription: {
         select: {
           status: true,
+          cancelScheduledAt: true,
+          currentPeriodStart: true,
+          currentPeriodEnd: true,
           plan: { select: { type: true, name: true } },
         },
       },
@@ -195,6 +226,86 @@ export const completeOnboarding = async (
     data: { onboardingDone: true },
   });
   res.json({ ok: true });
+};
+
+export const verifyEmail = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  const { token } = req.query as { token?: string };
+
+  if (!token) {
+    res.status(400).json({ message: "Token ausente" });
+    return;
+  }
+
+  const user = await prisma.user.findFirst({
+    where: {
+      emailVerifyToken: token,
+      emailVerifyExpiry: { gt: new Date() },
+    },
+  });
+
+  if (!user) {
+    res
+      .status(400)
+      .json({ message: "Link inválido ou expirado. Solicite um novo." });
+    return;
+  }
+
+  await prisma.user.update({
+    where: { id: user.id },
+    data: {
+      emailVerified: true,
+      emailVerifyToken: null,
+      emailVerifyExpiry: null,
+    },
+  });
+
+  // Redireciona para o front com sucesso
+  res.redirect(`${FRONTEND_URL}/confirmar-email?success=1`);
+};
+
+export const resendVerification = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  const { email } = req.body as { email?: string };
+
+  if (!email) {
+    res.status(400).json({ message: "E-mail obrigatório" });
+    return;
+  }
+
+  const user = await prisma.user.findUnique({ where: { email } });
+
+  // Resposta genérica para não vazar existência do e-mail
+  if (!user || user.emailVerified) {
+    res.json({
+      message:
+        "Se o e-mail existir e ainda não foi verificado, enviaremos um novo link.",
+    });
+    return;
+  }
+
+  const verifyToken = crypto.randomBytes(32).toString("hex");
+  const verifyExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000);
+
+  await prisma.user.update({
+    where: { id: user.id },
+    data: { emailVerifyToken: verifyToken, emailVerifyExpiry: verifyExpiry },
+  });
+
+  const verifyLink = `${FRONTEND_URL}/confirmar-email?token=${verifyToken}`;
+  sendVerificationEmail(
+    { name: user.name, email: user.email },
+    verifyLink,
+  ).catch(() => {});
+
+  res.json({
+    message:
+      "Se o e-mail existir e ainda não foi verificado, enviaremos um novo link.",
+  });
 };
 
 export const forgotPassword = async (
@@ -300,4 +411,69 @@ export const uploadAvatar = async (
   });
 
   res.json({ avatarUrl: updated.avatarUrl });
+};
+
+// DELETE /auth/me — exclusão de conta (LGPD)
+export const deleteAccount = async (
+  req: Request & { user?: { userId: string } },
+  res: Response,
+): Promise<void> => {
+  const userId = req.user!.userId;
+
+  // Verifica senha para confirmar identidade
+  const { password } = req.body as { password?: string };
+  if (!password) {
+    res
+      .status(400)
+      .json({ message: "Informe sua senha para confirmar a exclusão" });
+    return;
+  }
+
+  const user = await prisma.user.findUnique({ where: { id: userId } });
+  if (!user) {
+    res.status(404).json({ message: "Usuário não encontrado" });
+    return;
+  }
+
+  const valid = await bcrypt.compare(password, user.password);
+  if (!valid) {
+    res.status(401).json({ message: "Senha incorreta" });
+    return;
+  }
+
+  // Cancela assinatura no Asaas antes de apagar os dados
+  const sub = await prisma.subscription.findUnique({ where: { userId } });
+  if (sub?.mpSubscriptionId) {
+    try {
+      await cancelAsaasSubscription(sub.mpSubscriptionId);
+    } catch {
+      // Continua mesmo se o cancelamento no Asaas falhar
+    }
+  }
+
+  // Remove todos os dados do usuário em ordem segura (respeita FK)
+  await prisma.$transaction([
+    // ReportSymptom → SymptomReport
+    prisma.reportSymptom.deleteMany({
+      where: { report: { userId } },
+    }),
+    prisma.symptomReport.deleteMany({ where: { userId } }),
+    // ChatMessages → ChatSessions
+    prisma.chatMessage.deleteMany({
+      where: { session: { userId } },
+    }),
+    prisma.chatSession.deleteMany({ where: { userId } }),
+    // Consultas
+    prisma.consultation.deleteMany({ where: { userId } }),
+    // Perfil nutricional
+    prisma.nutritionalProfile.deleteMany({ where: { userId } }),
+    // Assinatura
+    prisma.subscription.deleteMany({ where: { userId } }),
+    // Usuário
+    prisma.user.delete({ where: { id: userId } }),
+  ]);
+
+  res.json({
+    message: "Conta excluída com sucesso. Todos os seus dados foram removidos.",
+  });
 };

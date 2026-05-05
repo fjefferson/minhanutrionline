@@ -1,8 +1,8 @@
 import { Router } from "express";
-import { mpWebhook } from "../controllers/subscription.controller";
+import { asaasWebhook } from "../controllers/subscription.controller";
 
 const router = Router();
 
-router.post("/mp", mpWebhook);
+router.post("/asaas", asaasWebhook);
 
 export default router;

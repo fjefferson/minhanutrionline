@@ -9,7 +9,7 @@ import { useRouter } from "next/navigation";
 import api from "@/lib/api";
 import Link from "next/link";
 import Image from "next/image";
-import { Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff, Mail } from "lucide-react";
 
 const schema = z.object({
   email: z.string().email("E-mail inválido"),
@@ -23,7 +23,9 @@ export default function LoginPage() {
   const router = useRouter();
 
   const [loginError, setLoginError] = useState<string | null>(null);
+  const [emailNotVerified, setEmailNotVerified] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
+  const [resentEmail, setResentEmail] = useState(false);
 
   const {
     register,
@@ -35,15 +37,31 @@ export default function LoginPage() {
 
   const onSubmit = async (data: FormData) => {
     setLoginError(null);
+    setEmailNotVerified(null);
     try {
       const res = await api.post("/auth/login", data);
       setAuth(res.data.user, res.data.token);
       router.push("/dashboard");
     } catch (err: unknown) {
-      const message =
-        (err as { response?: { data?: { message?: string } } })?.response?.data
-          ?.message ?? "Erro ao entrar";
-      setLoginError(message);
+      const errData = (
+        err as { response?: { data?: { code?: string; message?: string } } }
+      )?.response?.data;
+      if (errData?.code === "EMAIL_NOT_VERIFIED") {
+        setEmailNotVerified(data.email);
+      } else {
+        setLoginError(errData?.message ?? "Erro ao entrar");
+      }
+    }
+  };
+
+  const resendVerification = async () => {
+    if (!emailNotVerified) return;
+    setResentEmail(false);
+    try {
+      await api.post("/auth/resend-verification", { email: emailNotVerified });
+      setResentEmail(true);
+    } catch {
+      // silencioso
     }
   };
 
@@ -138,6 +156,37 @@ export default function LoginPage() {
           {loginError && (
             <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3">
               <p className="text-red-600 text-sm">{loginError}</p>
+            </div>
+          )}
+
+          {emailNotVerified && (
+            <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-4">
+              <div className="flex items-start gap-3">
+                <Mail className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" />
+                <div>
+                  <p className="text-amber-800 text-sm font-semibold mb-1">
+                    Confirme seu e-mail para entrar
+                  </p>
+                  <p className="text-amber-700 text-xs mb-3">
+                    Enviamos um link de confirmação para{" "}
+                    <strong>{emailNotVerified}</strong>. Verifique sua caixa de
+                    entrada (e o spam).
+                  </p>
+                  {resentEmail ? (
+                    <p className="text-green-700 text-xs font-semibold">
+                      ✓ Novo link enviado!
+                    </p>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={resendVerification}
+                      className="text-xs text-amber-800 underline hover:text-amber-900 transition"
+                    >
+                      Reenviar e-mail de confirmação
+                    </button>
+                  )}
+                </div>
+              </div>
             </div>
           )}
 

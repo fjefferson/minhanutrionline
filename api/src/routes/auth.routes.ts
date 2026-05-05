@@ -9,6 +9,9 @@ import {
   resetPassword,
   completeOnboarding,
   uploadAvatar,
+  verifyEmail,
+  resendVerification,
+  deleteAccount,
 } from "../controllers/auth.controller";
 import {
   registerValidator,
@@ -22,8 +25,11 @@ const router = Router();
 
 router.post("/register", registerValidator, validate, register);
 router.post("/login", loginValidator, validate, login);
+router.get("/verify-email", verifyEmail);
+router.post("/resend-verification", resendVerification);
 router.get("/me", authenticate, me);
 router.put("/me", authenticate, updateMe);
+router.delete("/me", authenticate, deleteAccount);
 router.put("/password", authenticate, changePassword);
 router.post("/forgot-password", forgotPassword);
 router.post("/reset-password", resetPassword);

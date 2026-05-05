@@ -2,16 +2,17 @@ import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 import { JwtPayload } from "../types";
 import { JWT_SECRET } from "../config/env";
+import { prisma } from "../lib/prisma";
 
 export interface AuthenticatedRequest extends Request {
   user?: JwtPayload;
 }
 
-export const authenticate = (
+export const authenticate = async (
   req: AuthenticatedRequest,
   res: Response,
   next: NextFunction,
-): void => {
+): Promise<void> => {
   const authHeader = req.headers.authorization;
 
   if (!authHeader?.startsWith("Bearer ")) {
@@ -23,6 +24,16 @@ export const authenticate = (
 
   try {
     const payload = jwt.verify(token, JWT_SECRET) as JwtPayload;
+    const exists = await prisma.user.findUnique({
+      where: { id: payload.userId },
+      select: { id: true },
+    });
+    if (!exists) {
+      res
+        .status(401)
+        .json({ message: "Sessão inválida. Faça login novamente." });
+      return;
+    }
     req.user = payload;
     next();
   } catch {

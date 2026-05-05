@@ -10,7 +10,7 @@
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:studio": "prisma studio",
-    "db:reset": "prisma migrate reset --force && prisma generate"
+    "db:reset": "prisma migrate reset --force && prisma generate && prisma db seed"
   },
   "keywords": [],
   "author": "",

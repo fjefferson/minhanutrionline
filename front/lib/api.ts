@@ -22,6 +22,7 @@ api.interceptors.response.use(
       !window.location.pathname.includes("/login")
     ) {
       localStorage.removeItem("token");
+      localStorage.removeItem("auth-storage");
       window.location.href = "/login";
     }
     return Promise.reject(error);

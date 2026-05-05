@@ -74,8 +74,13 @@ model User {
 
   resetToken       String?
   resetTokenExpiry DateTime?
-  onboardingDone   Boolean  @default(false)
+  onboardingDone   Boolean   @default(false)
   avatarUrl        String?
+  freeAiUsed       Int       @default(0)
+
+  emailVerified      Boolean   @default(false)
+  emailVerifyToken   String?
+  emailVerifyExpiry  DateTime?
 
   subscription       Subscription?
   symptomReports     SymptomReport[]
@@ -143,17 +148,18 @@ model Plan {
 }
 
 model Subscription {
-  id                 String             @id @default(cuid())
-  userId             String             @unique
-  planId             String
-  pendingPlanId      String?
-  status             SubscriptionStatus @default(ACTIVE)
-  mpSubscriptionId   String?
-  mpPayerId          String?
-  currentPeriodStart DateTime?
-  currentPeriodEnd   DateTime?
-  createdAt          DateTime           @default(now())
-  updatedAt          DateTime           @updatedAt
+  id                  String             @id @default(cuid())
+  userId              String             @unique
+  planId              String
+  pendingPlanId       String?
+  status              SubscriptionStatus @default(ACTIVE)
+  mpSubscriptionId    String?
+  mpPayerId           String?
+  currentPeriodStart  DateTime?
+  currentPeriodEnd    DateTime?
+  cancelScheduledAt   DateTime?
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
 
   user        User  @relation(fields: [userId], references: [id])
   plan        Plan  @relation("SubscriptionPlan", fields: [planId], references: [id])

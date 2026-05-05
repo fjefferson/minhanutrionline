@@ -7,16 +7,18 @@ import {
   getReports,
   rateReport,
   requestReview,
+  getFreeStatus,
 } from "../controllers/glp1.controller";
 
 const router = Router();
 
 router.use(authenticate);
 
+router.get("/free-status", getFreeStatus);
 router.get("/symptoms", getSymptoms);
-router.post("/report", requirePlan("BASIC"), createReport);
-router.get("/reports", requirePlan("BASIC"), getReports);
-router.patch("/report/:id/helpful", requirePlan("BASIC"), rateReport);
+router.post("/report", createReport);
+router.get("/reports", getReports);
+router.patch("/report/:id/helpful", rateReport);
 router.post("/report/:id/review", requirePlan("BASIC"), requestReview);
 
 export default router;

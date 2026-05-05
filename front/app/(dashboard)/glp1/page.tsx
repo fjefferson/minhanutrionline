@@ -14,7 +14,8 @@ import {
   ChevronRight,
   MessageSquare,
   UserCircle,
-  Lock,
+  Sparkles,
+  Zap,
 } from "lucide-react";
 
 interface Symptom {
@@ -34,24 +35,56 @@ interface Report {
 
 type View = "history" | "form" | "result";
 
-function PlanGateModal() {
+function FreeLimitModal() {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-8 flex flex-col items-center gap-5 text-center">
-        <div className="w-14 h-14 rounded-full bg-green-100 flex items-center justify-center">
-          <Lock className="w-7 h-7 text-green-600" />
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden">
+        <div className="bg-gradient-to-br from-green-600 to-emerald-700 p-7 text-center">
+          <div className="w-14 h-14 rounded-full bg-white/20 flex items-center justify-center mx-auto mb-3">
+            <Sparkles className="w-7 h-7 text-white" />
+          </div>
+          <h2 className="text-lg font-bold text-white">
+            Suas 3 orientações gratuitas acabaram!
+          </h2>
+          <p className="text-green-100 text-sm mt-1">
+            Você aproveitou sua degustação 🎉
+          </p>
         </div>
-        <h2 className="text-lg font-bold text-gray-900">Plano necessário</h2>
-        <p className="text-sm text-gray-500">
-          As consultas por sintomas GLP-1 estão disponíveis a partir do plano
-          Basic. Assine para ter acesso.
-        </p>
-        <Link
-          href="/planos"
-          className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-3 rounded-xl transition-colors text-sm"
-        >
-          Ver planos
-        </Link>
+        <div className="p-7 flex flex-col gap-4">
+          <p className="text-sm text-gray-600 text-center leading-relaxed">
+            Para continuar recebendo orientações personalizadas e ter acesso ao
+            chat com a nutricionista, escolha um plano.
+          </p>
+          <div className="bg-green-50 rounded-xl p-4">
+            <p className="text-xs font-semibold text-green-700 uppercase tracking-wide mb-2">
+              No plano Basic você tem:
+            </p>
+            <ul className="space-y-1">
+              {[
+                "Orientações ilimitadas por IA",
+                "Controle de sintomas",
+                "Acesso ao conteúdo educativo",
+              ].map((f) => (
+                <li
+                  key={f}
+                  className="flex items-center gap-2 text-sm text-gray-700"
+                >
+                  <span className="text-green-500 text-xs">✓</span> {f}
+                </li>
+              ))}
+            </ul>
+            <p className="text-green-700 font-bold text-lg mt-3">
+              R$ 14,90
+              <span className="text-xs font-normal text-green-600">/mês</span>
+            </p>
+          </div>
+          <Link
+            href="/planos"
+            className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-3 rounded-xl transition-colors text-sm text-center"
+          >
+            Assinar agora
+          </Link>
+        </div>
       </div>
     </div>
   );
@@ -87,8 +120,11 @@ export default function Glp1Page() {
   const [symptoms, setSymptoms] = useState<Symptom[]>([]);
   const [profileBlocked, setProfileBlocked] = useState(false);
   const [profileChecked, setProfileChecked] = useState(false);
-  const [planBlocked, setPlanBlocked] = useState(false);
-  const [planChecked, setPlanChecked] = useState(false);
+  const [freeLimitReached, setFreeLimitReached] = useState(false);
+  const [freeAiUsed, setFreeAiUsed] = useState(0);
+  const [freeAiLimit] = useState(3);
+  const [hasActivePlan, setHasActivePlan] = useState(false);
+  const [freeStatusChecked, setFreeStatusChecked] = useState(false);
 
   // form
   const [selected, setSelected] = useState<string[]>([]);
@@ -107,26 +143,32 @@ export default function Glp1Page() {
     setLoadingHistory(true);
     api
       .get("/glp1/reports")
+      .then((r) => setHistory(r.data))
+      .catch(() => {})
+      .finally(() => setLoadingHistory(false));
+  };
+
+  const loadFreeStatus = () => {
+    api
+      .get("/glp1/free-status")
       .then((r) => {
-        setHistory(r.data);
-        setPlanBlocked(false);
+        setHasActivePlan(r.data.hasActivePlan);
+        setFreeAiUsed(r.data.freeAiUsed);
+        setFreeLimitReached(
+          !r.data.hasActivePlan && r.data.freeAiUsed >= r.data.freeAiLimit,
+        );
       })
-      .catch((err) => {
-        if (err?.response?.status === 403) setPlanBlocked(true);
-      })
-      .finally(() => {
-        setLoadingHistory(false);
-        setPlanChecked(true);
-      });
+      .catch(() => {})
+      .finally(() => setFreeStatusChecked(true));
   };
 
   useEffect(() => {
     loadHistory();
+    loadFreeStatus();
     api
       .get("/glp1/symptoms")
       .then((r) => setSymptoms(r.data))
       .catch(() => {});
-    // Gate: verifica se perfil tem dados básicos
     api
       .get("/profile/nutritional")
       .then((r) => {
@@ -170,8 +212,9 @@ export default function Glp1Page() {
       setView("result");
       loadHistory();
     } catch (err: any) {
-      if (err?.response?.status === 403) {
-        setPlanBlocked(true);
+      if (err?.response?.data?.code === "FREE_LIMIT_REACHED") {
+        setFreeLimitReached(true);
+        setFreeAiUsed(err.response.data.freeAiUsed);
         setView("history");
       } else {
         setFormError("Erro ao processar. Tente novamente.");
@@ -430,8 +473,42 @@ export default function Glp1Page() {
   /* ── HISTORY VIEW (default) ── */
   return (
     <div className="max-w-3xl">
-      {planChecked && planBlocked && <PlanGateModal />}
-      {profileChecked && profileBlocked && !planBlocked && <ProfileGateModal />}
+      {freeStatusChecked && freeLimitReached && <FreeLimitModal />}
+      {profileChecked && profileBlocked && <ProfileGateModal />}
+
+      {/* Contador de créditos gratuitos */}
+      {freeStatusChecked && !hasActivePlan && !freeLimitReached && (
+        <div className="mb-6 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-100 rounded-2xl px-5 py-4 flex items-center gap-4">
+          <div className="w-10 h-10 bg-green-600 rounded-xl flex items-center justify-center shrink-0">
+            <Zap className="w-5 h-5 text-white" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-gray-900">
+              {freeAiLimit - freeAiUsed === 1
+                ? "1 orientação gratuita restante"
+                : `${freeAiLimit - freeAiUsed} orientações gratuitas restantes`}
+            </p>
+            <div className="flex items-center gap-2 mt-1.5">
+              <div className="flex-1 h-1.5 bg-white rounded-full overflow-hidden">
+                <div
+                  className="h-1.5 bg-green-500 rounded-full transition-all"
+                  style={{ width: `${(freeAiUsed / freeAiLimit) * 100}%` }}
+                />
+              </div>
+              <span className="text-xs text-gray-500 shrink-0">
+                {freeAiUsed}/{freeAiLimit}
+              </span>
+            </div>
+          </div>
+          <Link
+            href="/planos"
+            className="shrink-0 text-xs font-semibold text-green-700 bg-white border border-green-200 px-3 py-1.5 rounded-lg hover:bg-green-50 transition whitespace-nowrap"
+          >
+            Ver planos
+          </Link>
+        </div>
+      )}
+
       <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Consultas GLP-1</h1>

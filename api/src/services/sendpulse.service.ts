@@ -484,7 +484,11 @@ export async function sendConsultationConfirmedEmail(
 ) {
   try {
     const token = await getAccessToken();
-    const html = buildConsultationConfirmedHtml(to.name, scheduledAt, meetingLink);
+    const html = buildConsultationConfirmedHtml(
+      to.name,
+      scheduledAt,
+      meetingLink,
+    );
     const dateStr = scheduledAt.toLocaleDateString("pt-BR", {
       timeZone: "America/Sao_Paulo",
       weekday: "long",
@@ -599,4 +603,138 @@ function buildConsultationConfirmedHtml(
 </table>
 </body>
 </html>`;
+}
+
+// ── VERIFICAÇÃO DE E-MAIL ────────────────────────────────────────────────────
+
+export async function sendVerificationEmail(
+  to: { name: string; email: string },
+  verifyLink: string,
+) {
+  try {
+    const token = await getAccessToken();
+    const firstName = to.name.split(" ")[0];
+    const html = `<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="pt-BR">
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Confirme seu e-mail &#8212; MinhaNutri Online</title>
+</head>
+<body style="margin:0;padding:0;background-color:#f0fdf4;font-family:Arial,Helvetica,sans-serif;">
+<table border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color:#f0fdf4;">
+  <tr><td align="center" style="padding:40px 16px;">
+  <table border="0" cellpadding="0" cellspacing="0" width="600" style="max-width:600px;">
+
+    <tr>
+      <td align="center" bgcolor="#16a34a" style="background-color:#16a34a;border-radius:16px 16px 0 0;padding:40px 40px 32px;">
+        <table border="0" cellpadding="0" cellspacing="0">
+          <tr><td align="center" style="padding-bottom:14px;">
+            <table border="0" cellpadding="0" cellspacing="0"><tr>
+              <td align="center" bgcolor="#15803d" style="background-color:#15803d;border-radius:50%;width:60px;height:60px;font-size:28px;line-height:60px;">&#10003;</td>
+            </tr></table>
+          </td></tr>
+          <tr><td align="center">
+            <h1 style="margin:0 0 6px;color:#ffffff;font-size:24px;font-weight:bold;font-family:Arial,Helvetica,sans-serif;">MinhaNutri Online</h1>
+            <p style="margin:0;color:#bbf7d0;font-size:14px;font-family:Arial,Helvetica,sans-serif;">Confirme seu e-mail para come&#231;ar</p>
+          </td></tr>
+        </table>
+      </td>
+    </tr>
+
+    <tr>
+      <td align="center" bgcolor="#dcfce7" style="background-color:#dcfce7;padding:16px 40px;border-left:1px solid #bbf7d0;border-right:1px solid #bbf7d0;">
+        <p style="margin:0;font-size:12px;font-weight:bold;color:#15803d;font-family:Arial,Helvetica,sans-serif;letter-spacing:1px;">&#9993;&nbsp; CONFIRMA&#199;&#195;O DE E-MAIL</p>
+      </td>
+    </tr>
+
+    <tr>
+      <td bgcolor="#ffffff" style="background-color:#ffffff;padding:40px;border-left:1px solid #e5e7eb;border-right:1px solid #e5e7eb;">
+        <p style="margin:0 0 6px;font-size:20px;font-weight:bold;color:#111827;font-family:Arial,Helvetica,sans-serif;">Ol&#225;, ${firstName}!</p>
+        <p style="margin:0 0 28px;font-size:15px;color:#4b5563;line-height:1.7;font-family:Arial,Helvetica,sans-serif;">
+          Obrigada por se cadastrar no MinhaNutri Online! Para ativar sua conta e come&#231;ar a usar nossas ferramentas, confirme seu e-mail clicando no bot&#227;o abaixo.
+        </p>
+
+        <table border="0" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom:28px;">
+          <tr><td align="center">
+            <table border="0" cellpadding="0" cellspacing="0">
+              <tr><td align="center" bgcolor="#16a34a" style="background-color:#16a34a;border-radius:10px;">
+                <a href="${verifyLink}"
+                   style="display:inline-block;color:#ffffff;text-decoration:none;padding:18px 48px;font-size:16px;font-weight:bold;font-family:Arial,Helvetica,sans-serif;">
+                  Confirmar meu e-mail &#8594;
+                </a>
+              </td></tr>
+            </table>
+          </td></tr>
+        </table>
+
+        <table border="0" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom:16px;">
+          <tr>
+            <td bgcolor="#fffbeb" style="background-color:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:16px 18px;">
+              <table border="0" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td style="vertical-align:top;padding-right:12px;font-size:20px;line-height:1;">&#9201;</td>
+                  <td>
+                    <p style="margin:0;font-size:14px;font-weight:bold;color:#92400e;font-family:Arial,Helvetica,sans-serif;">Link v&#225;lido por 24 horas</p>
+                    <p style="margin:4px 0 0;font-size:13px;color:#a16207;line-height:1.5;font-family:Arial,Helvetica,sans-serif;">Se precisar, voc&#234; pode solicitar um novo link de confirma&#231;&#227;o na p&#225;gina de login.</p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+
+        <p style="margin:0;font-size:13px;color:#9ca3af;font-family:Arial,Helvetica,sans-serif;">Se voc&#234; n&#227;o criou uma conta no MinhaNutri Online, pode ignorar este e-mail com seguran&#231;a.</p>
+      </td>
+    </tr>
+
+    <tr>
+      <td bgcolor="#fafafa" style="background-color:#fafafa;padding:24px 40px;border-left:1px solid #e5e7eb;border-right:1px solid #e5e7eb;">
+        <table border="0" cellpadding="0" cellspacing="0">
+          <tr>
+            <td style="vertical-align:middle;padding-right:14px;">
+              <table border="0" cellpadding="0" cellspacing="0"><tr>
+                <td align="center" bgcolor="#16a34a" style="background-color:#16a34a;border-radius:50%;width:44px;height:44px;font-size:18px;font-weight:bold;color:#ffffff;line-height:44px;font-family:Arial,Helvetica,sans-serif;">E</td>
+              </tr></table>
+            </td>
+            <td style="vertical-align:middle;">
+              <p style="margin:0;font-size:14px;font-weight:bold;color:#111827;font-family:Arial,Helvetica,sans-serif;">Elane Oliveira</p>
+              <p style="margin:2px 0 0;font-size:13px;color:#6b7280;font-family:Arial,Helvetica,sans-serif;">Nutricionista &middot; CRN-14533</p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+
+    <tr>
+      <td align="center" bgcolor="#f3f4f6" style="background-color:#f3f4f6;border-radius:0 0 16px 16px;padding:20px 40px;border:1px solid #e5e7eb;border-top:none;">
+        <p style="margin:0;font-size:12px;color:#d1d5db;font-family:Arial,Helvetica,sans-serif;">
+          &copy; 2026 MinhaNutri Online &nbsp;&middot;&nbsp;
+          <a href="https://minhanutrionline.com.br" style="color:#16a34a;text-decoration:none;">minhanutrionline.com.br</a>
+        </p>
+      </td>
+    </tr>
+
+  </table>
+  </td></tr>
+</table>
+</body>
+</html>`;
+
+    await axios.post(
+      `${SENDPULSE_API_URL}/smtp/emails`,
+      {
+        email: {
+          html: Buffer.from(html).toString("base64"),
+          text: `Olá, ${firstName}!\n\nConfirme seu e-mail para ativar sua conta:\n${verifyLink}\n\nLink válido por 24 horas.\n\nElane Oliveira — MinhaNutri Online`,
+          subject: "Confirme seu e-mail — MinhaNutri Online",
+          from: { name: FROM_NAME, email: FROM_EMAIL },
+          to: [{ name: to.name, email: to.email }],
+        },
+      },
+      { headers: { Authorization: `Bearer ${token}` } },
+    );
+  } catch (err) {
+    console.error("[SendPulse] Erro ao enviar e-mail de verificação:", err);
+  }
 }
