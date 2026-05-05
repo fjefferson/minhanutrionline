@@ -1,81 +1,175 @@
-"use client";
-
+import type { Metadata } from "next";
 import Link from "next/link";
 import Image from "next/image";
-import { useState } from "react";
 import {
   ClipboardList,
   MessageCircle,
   CalendarDays,
-  Award,
-  ShieldCheck,
   Star,
-  ChevronDown,
   ArrowRight,
   CheckCircle2,
   Zap,
 } from "lucide-react";
 import HomeHeader from "@/components/layout/HomeHeader";
 import PlansSection from "@/components/home/PlansSection";
+import FaqSection from "@/components/home/FaqSection";
 
-const FAQ_ITEMS = [
+export const metadata: Metadata = {
+  title:
+    "Acompanhamento Nutricional para Canetas GLP-1 | Ozempic, Wegovy, Mounjaro",
+  description:
+    "Plataforma criada por nutricionista especialista em GLP-1. Controle seus sintomas, receba orientações personalizadas por IA e acompanhe seu emagrecimento com Ozempic, Wegovy ou Mounjaro. Experimente grátis.",
+  alternates: {
+    canonical: "https://minhanutrionline.com.br",
+  },
+  openGraph: {
+    title:
+      "Acompanhamento Nutricional para GLP-1 — Ozempic, Wegovy, Mounjaro",
+    description:
+      "Plataforma criada pela nutricionista Elane Oliveira (CRN-14533). Controle de sintomas, plano alimentar personalizado e consultas online para quem usa canetas emagrecedoras.",
+    url: "https://minhanutrionline.com.br",
+  },
+};
+
+const jsonLd = [
   {
-    q: "O que são os tratamentos com GLP-1?",
-    a: "GLP-1 (Glucagon-Like Peptide-1) é uma classe de medicamentos usados no tratamento da obesidade e controle metabólico, sob prescrição médica. Eles imitam um hormônio natural que regula o apetite e aumenta a saciedade, ajudando na perda de peso de forma gradual e sustentável.",
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    name: "MinhaNutri Online",
+    url: "https://minhanutrionline.com.br",
+    logo: {
+      "@type": "ImageObject",
+      url: "https://minhanutrionline.com.br/images/avatar_atendimento_elane_oliveira_nutri.jpg",
+    },
+    description:
+      "Plataforma de acompanhamento nutricional especializada em tratamentos GLP-1. Suporte para pacientes que usam Ozempic, Wegovy e Mounjaro.",
+    founder: {
+      "@type": "Person",
+      name: "Elane Oliveira",
+      jobTitle: "Nutricionista",
+      identifier: "CRN-14533",
+    },
+    areaServed: { "@type": "Country", name: "Brasil" },
   },
   {
-    q: "Quais medicamentos fazem parte dessa classe?",
-    a: "Os principais são base de Semaglutida (Ozempic®, Wegovy®, Rybelsus®) e Tirzepatida (Mounjaro®). Cada um tem princípio ativo e dosagem específicos — cabe ao médico endocrinologista definir o mais adequado para cada caso.",
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    name: "MinhaNutri Online",
+    url: "https://minhanutrionline.com.br",
+    description:
+      "Acompanhamento nutricional online para quem usa canetas emagrecedoras GLP-1",
   },
   {
-    q: "Para quem são indicados?",
-    a: "Apenas o médico endocrinologista pode definir quem precisa do tratamento, por isso a avaliação médica é fundamental. Geralmente são indicados para pessoas com IMC elevado ou condições metabólicas associadas.",
+    "@context": "https://schema.org",
+    "@type": "MedicalBusiness",
+    name: "MinhaNutri Online",
+    url: "https://minhanutrionline.com.br",
+    description:
+      "Acompanhamento nutricional especializado em GLP-1, incluindo Ozempic (semaglutida), Wegovy e Mounjaro (tirzepatida). Controle de sintomas, plano alimentar e emagrecimento sustentável.",
+    medicalSpecialty: "Nutrição",
+    employee: {
+      "@type": "Person",
+      name: "Elane Oliveira",
+      jobTitle: "Nutricionista",
+      identifier: "CRN-14533",
+    },
+    areaServed: { "@type": "Country", name: "Brasil" },
+    hasOfferCatalog: {
+      "@type": "OfferCatalog",
+      name: "Planos de Acompanhamento Nutricional GLP-1",
+      itemListElement: [
+        {
+          "@type": "Offer",
+          name: "Plano Basic",
+          description:
+            "Orientações por IA, controle de sintomas e base de conhecimento nutricional para GLP-1",
+        },
+        {
+          "@type": "Offer",
+          name: "Plano Plus",
+          description:
+            "Plano Basic + chat direto com a nutricionista Elane Oliveira",
+        },
+        {
+          "@type": "Offer",
+          name: "Plano Premium",
+          description:
+            "Plano Plus + consultas individuais por videochamada com acompanhamento personalizado",
+        },
+      ],
+    },
   },
   {
-    q: "Quais são os efeitos colaterais mais comuns?",
-    a: "Os efeitos colaterais costumam ser leves e passageiros, sendo mais comuns problemas gastrointestinais como náusea e diarreia, especialmente no início do tratamento. Nossa nutricionista está disponível para orientar como minimizar o desconforto.",
-  },
-  {
-    q: "O que acontece se eu parar de tomar a medicação?",
-    a: "A medicação é efetiva para emagrecer, mas não garante a manutenção do peso após o término. Por isso, o acompanhamento nutricional é essencial — nossa nutricionista te ajuda a criar novos hábitos alimentares para manter os resultados a longo prazo.",
-  },
-  {
-    q: "Quais as regras da ANVISA para esses medicamentos?",
-    a: "A ANVISA exige prescrição médica em duas vias (uma retida pela farmácia), com validade de 90 dias. Nunca adquira esses medicamentos sem prescrição.",
-  },
-  {
-    q: "O acompanhamento nutricional faz diferença?",
-    a: "Sim. Estudos mostram que pacientes acompanhados por nutricionistas perdem significativamente mais peso do que os que usam apenas a medicação. O suporte nutricional ajuda a criar hábitos que sustentam o resultado mesmo após o fim do tratamento.",
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: [
+      {
+        "@type": "Question",
+        name: "O que são os tratamentos com GLP-1?",
+        acceptedAnswer: {
+          "@type": "Answer",
+          text: "GLP-1 (Glucagon-Like Peptide-1) é uma classe de medicamentos usados no tratamento da obesidade e controle metabólico, sob prescrição médica. Eles imitam um hormônio natural que regula o apetite e aumenta a saciedade, ajudando na perda de peso de forma gradual e sustentável.",
+        },
+      },
+      {
+        "@type": "Question",
+        name: "Quais medicamentos GLP-1 existem?",
+        acceptedAnswer: {
+          "@type": "Answer",
+          text: "Os principais são base de Semaglutida (Ozempic®, Wegovy®, Rybelsus®) e Tirzepatida (Mounjaro®). Cada um tem princípio ativo e dosagem específicos — cabe ao médico endocrinologista definir o mais adequado para cada caso.",
+        },
+      },
+      {
+        "@type": "Question",
+        name: "Para quem são indicados os medicamentos GLP-1?",
+        acceptedAnswer: {
+          "@type": "Answer",
+          text: "Apenas o médico endocrinologista pode definir quem precisa do tratamento, por isso a avaliação médica é fundamental. Geralmente são indicados para pessoas com IMC elevado ou condições metabólicas associadas.",
+        },
+      },
+      {
+        "@type": "Question",
+        name: "Quais são os efeitos colaterais mais comuns do GLP-1?",
+        acceptedAnswer: {
+          "@type": "Answer",
+          text: "Os efeitos colaterais costumam ser leves e passageiros, sendo mais comuns problemas gastrointestinais como náusea e diarreia, especialmente no início do tratamento. A nutricionista orienta como minimizar o desconforto com ajustes alimentares.",
+        },
+      },
+      {
+        "@type": "Question",
+        name: "O que acontece se eu parar de tomar a medicação GLP-1?",
+        acceptedAnswer: {
+          "@type": "Answer",
+          text: "A medicação é efetiva para emagrecer, mas não garante a manutenção do peso após o término. O acompanhamento nutricional é essencial para criar novos hábitos que mantêm os resultados a longo prazo.",
+        },
+      },
+      {
+        "@type": "Question",
+        name: "Quais as regras da ANVISA para os medicamentos GLP-1?",
+        acceptedAnswer: {
+          "@type": "Answer",
+          text: "A ANVISA exige prescrição médica em duas vias (uma retida pela farmácia), com validade de 90 dias. Nunca adquira esses medicamentos sem prescrição médica.",
+        },
+      },
+      {
+        "@type": "Question",
+        name: "O acompanhamento nutricional faz diferença no tratamento com GLP-1?",
+        acceptedAnswer: {
+          "@type": "Answer",
+          text: "Sim. Estudos mostram que pacientes acompanhados por nutricionistas perdem significativamente mais peso do que os que usam apenas a medicação. O suporte nutricional ajuda a criar hábitos que sustentam o resultado mesmo após o fim do tratamento.",
+        },
+      },
+    ],
   },
 ];
-
-function FaqItem({ q, a }: { q: string; a: string }) {
-  const [open, setOpen] = useState(false);
-  return (
-    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-      <button
-        onClick={() => setOpen(!open)}
-        className="w-full flex items-center justify-between px-5 py-4 text-left gap-4"
-      >
-        <span className="font-medium text-gray-900 text-sm sm:text-base">
-          {q}
-        </span>
-        <ChevronDown
-          className={`w-5 h-5 text-gray-400 shrink-0 transition-transform ${open ? "rotate-180" : ""}`}
-        />
-      </button>
-      {open && (
-        <div className="px-5 pb-5 text-sm text-gray-600 leading-relaxed border-t border-gray-50 pt-3">
-          {a}
-        </div>
-      )}
-    </div>
-  );
-}
 
 export default function HomePage() {
   return (
     <div className="min-h-screen bg-white">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       <HomeHeader />
 
       {/* ── HERO ─────────────────────────────────────────────────────── */}
@@ -503,27 +597,7 @@ export default function HomePage() {
       <PlansSection />
 
       {/* ── FAQ ──────────────────────────────────────────────────────── */}
-      <section className="py-14 sm:py-20 bg-gray-50">
-        <div className="max-w-3xl mx-auto px-4 sm:px-6">
-          <div className="text-center mb-10">
-            <span className="inline-block bg-white border border-gray-100 text-gray-600 text-xs font-semibold px-4 py-1.5 rounded-full mb-4 shadow-sm">
-              Dúvidas frequentes
-            </span>
-            <h2 className="text-2xl sm:text-3xl font-bold text-gray-900">
-              Perguntas frequentes
-            </h2>
-          </div>
-          <div className="space-y-3">
-            {FAQ_ITEMS.map((item, i) => (
-              <FaqItem key={i} q={item.q} a={item.a} />
-            ))}
-          </div>
-          <p className="text-center text-xs text-gray-400 mt-8">
-            As orientações fornecidas são educacionais e não substituem consulta
-            médica ou nutricional presencial.
-          </p>
-        </div>
-      </section>
+      <FaqSection />
 
       {/* ── CTA BANNER ───────────────────────────────────────────────── */}
       <section className="py-16 sm:py-24">
