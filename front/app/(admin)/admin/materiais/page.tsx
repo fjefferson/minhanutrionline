@@ -798,8 +798,8 @@ export default function AdminMateriaisPage() {
                 </>
               ) : (
                 /* Edit mode — allow changing cover */
-                editingMat?.type !== "VIDEO" &&
-                editingMat?.type !== "IMAGE" && (
+                (editingMat?.type as string) !== "VIDEO" &&
+                (editingMat?.type as string) !== "IMAGE" && (
                   <div>
                     {editingMat?.thumbnailUrl && !matCover && (
                       <div className="mb-2">
