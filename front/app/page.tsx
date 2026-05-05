@@ -9,6 +9,10 @@ import {
   ArrowRight,
   CheckCircle2,
   Zap,
+  ShieldCheck,
+  Leaf,
+  Instagram,
+  Mail,
 } from "lucide-react";
 import HomeHeader from "@/components/layout/HomeHeader";
 import PlansSection from "@/components/home/PlansSection";
@@ -630,51 +634,109 @@ export default function HomePage() {
       </section>
 
       {/* ── FOOTER ───────────────────────────────────────────────────── */}
-      <footer className="border-t border-gray-100 py-10 bg-white">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-5 text-sm text-gray-400">
-          <div className="text-center sm:text-left">
-            <Image
-              src="/images/logo.png"
-              alt="MinhaNutri Online"
-              width={160}
-              height={44}
-              className="h-10 w-auto object-contain mb-1"
-            />
-            <p className="text-xs mt-1">
-              Responsável técnica: Elane Oliveira · Nutricionista · CRN-14533
-            </p>
+      <footer className="bg-gray-950 text-gray-400">
+        {/* Main columns */}
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 pt-16 pb-10">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10 pb-12 border-b border-white/10">
+            {/* Brand */}
+            <div className="lg:col-span-2">
+              <Image
+                src="/images/logo.png"
+                alt="MinhaNutri Online"
+                width={180}
+                height={50}
+                className="h-10 w-auto object-contain mb-4 brightness-0 invert opacity-90"
+              />
+              <p className="text-sm leading-relaxed max-w-sm text-gray-400">
+                Plataforma de acompanhamento nutricional especializada em
+                canetas GLP-1. Cuide da sua saúde com orientação profissional e
+                tecnologia.
+              </p>
+              <div className="mt-6 inline-flex items-center gap-3 bg-white/5 border border-white/10 rounded-xl px-4 py-3">
+                <div className="w-8 h-8 rounded-full bg-green-500/15 flex items-center justify-center shrink-0">
+                  <ShieldCheck className="w-4 h-4 text-green-400" />
+                </div>
+                <div>
+                  <p className="text-[11px] text-gray-500 leading-none mb-0.5">
+                    Responsável técnica
+                  </p>
+                  <p className="text-sm font-medium text-white">
+                    Elane Oliveira · CRN-14533
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Plataforma */}
+            <div>
+              <h4 className="text-xs font-semibold text-white uppercase tracking-widest mb-5">
+                Plataforma
+              </h4>
+              <ul className="space-y-3">
+                {[
+                  { href: "/sobre", label: "Sobre nós" },
+                  { href: "#planos", label: "Planos" },
+                  { href: "/contato", label: "Contato" },
+                  { href: "/login", label: "Entrar na conta" },
+                ].map(({ href, label }) => (
+                  <li key={href}>
+                    <Link
+                      href={href}
+                      className="text-sm text-gray-400 hover:text-green-400 transition-colors"
+                    >
+                      {label}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            {/* Legal */}
+            <div>
+              <h4 className="text-xs font-semibold text-white uppercase tracking-widest mb-5">
+                Legal
+              </h4>
+              <ul className="space-y-3">
+                {[
+                  { href: "/termos", label: "Termos de Uso" },
+                  { href: "/privacidade", label: "Privacidade" },
+                ].map(({ href, label }) => (
+                  <li key={href}>
+                    <Link
+                      href={href}
+                      className="text-sm text-gray-400 hover:text-green-400 transition-colors"
+                    >
+                      {label}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+
+              <h4 className="text-xs font-semibold text-white uppercase tracking-widest mt-8 mb-5">
+                Contato
+              </h4>
+              <a
+                href="mailto:contato@minhanutrionline.com.br"
+                className="inline-flex items-center gap-2 text-sm text-gray-400 hover:text-green-400 transition-colors"
+              >
+                <Mail className="w-3.5 h-3.5" />
+                Enviar e-mail
+              </a>
+            </div>
           </div>
-          <div className="text-center text-xs">
-            <p>
+
+          {/* Bottom bar */}
+          <div className="pt-8 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-2 text-xs text-gray-600">
+              <Leaf className="w-3.5 h-3.5 text-green-700" />
+              <span>
+                © 2026 MinhaNutri Online. Todos os direitos reservados.
+              </span>
+            </div>
+            <p className="text-xs text-gray-600 text-center">
               As orientações são educacionais e não substituem consulta médica
               presencial.
             </p>
-            <p className="mt-1">
-              © 2026 MinhaNutri Online. Todos os direitos reservados.
-            </p>
-          </div>
-          <div className="flex gap-5 text-xs font-medium">
-            <Link href="/sobre" className="hover:text-green-600 transition">
-              Sobre
-            </Link>
-            <Link href="/termos" className="hover:text-green-600 transition">
-              Termos de Uso
-            </Link>
-            <Link
-              href="/privacidade"
-              className="hover:text-green-600 transition"
-            >
-              Privacidade
-            </Link>
-            <Link href="/contato" className="hover:text-green-600 transition">
-              Contato
-            </Link>
-            <Link href="#planos" className="hover:text-green-600 transition">
-              Planos
-            </Link>
-            <Link href="/login" className="hover:text-green-600 transition">
-              Entrar
-            </Link>
           </div>
         </div>
       </footer>
