@@ -87,6 +87,8 @@ model User {
   chatSessions       ChatSession[]
   nutritionalProfile NutritionalProfile?
   consultations      Consultation[]
+  materialReactions  MaterialReaction[]
+  materialComments   MaterialComment[]
 }
 
 model NutritionalProfile {
@@ -280,4 +282,79 @@ model ConsultationConfig {
   bizHours    Int[]               /// horários disponíveis em horário Brasília (0-23)
   bizDays     Int[]               /// dias da semana disponíveis (0=Dom, 1=Seg ... 6=Sáb)
   updatedAt   DateTime @updatedAt
+}
+
+enum MaterialType {
+  PDF
+  VIDEO
+  DOCUMENT
+  IMAGE
+  OTHER
+}
+
+model MaterialCategory {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  icon        String?
+  color       String   @default("#16a34a")
+  active      Boolean  @default(true)
+  order       Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  materials Material[]
+}
+
+model Material {
+  id          String       @id @default(cuid())
+  categoryId  String
+  title       String
+  description String?
+  type        MaterialType
+  url         String
+  thumbnailUrl String?
+  fileSize    Int?
+  duration    Int?
+  active      Boolean      @default(true)
+  featured    Boolean      @default(false)
+  order       Int          @default(0)
+  views       Int          @default(0)
+  downloads   Int          @default(0)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  category  MaterialCategory    @relation(fields: [categoryId], references: [id])
+  reactions MaterialReaction[]
+  comments  MaterialComment[]
+}
+
+enum ReactionType {
+  LIKE
+  DISLIKE
+}
+
+model MaterialReaction {
+  id         String       @id @default(cuid())
+  materialId String
+  userId     String
+  type       ReactionType
+  createdAt  DateTime     @default(now())
+
+  material Material @relation(fields: [materialId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([materialId, userId])
+}
+
+model MaterialComment {
+  id         String   @id @default(cuid())
+  materialId String
+  userId     String
+  content    String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  material Material @relation(fields: [materialId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }

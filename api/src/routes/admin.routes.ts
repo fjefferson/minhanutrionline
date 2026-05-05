@@ -31,6 +31,20 @@ import {
   adminGetConsultationConfig,
   adminUpdateConsultationConfig,
 } from "../controllers/consultation.controller";
+import {
+  adminListCategories,
+  adminCreateCategory,
+  adminUpdateCategory,
+  adminDeleteCategory,
+  adminListMaterials,
+  adminCreateMaterial,
+  adminUpdateMaterial,
+  adminDeleteMaterial,
+} from "../controllers/material.controller";
+import {
+  materialUpload,
+  materialUploadFields,
+} from "../middlewares/upload.middleware";
 
 const router = Router();
 
@@ -63,5 +77,17 @@ router.get("/consultation-config", adminGetConsultationConfig);
 router.put("/consultation-config", adminUpdateConsultationConfig);
 router.get("/users", getAdminUsers);
 router.get("/users/:id/profile", getAdminUserProfile);
+
+// Material categories
+router.get("/material-categories", adminListCategories);
+router.post("/material-categories", adminCreateCategory);
+router.put("/material-categories/:id", adminUpdateCategory);
+router.delete("/material-categories/:id", adminDeleteCategory);
+
+// Materials
+router.get("/materials", adminListMaterials);
+router.post("/materials", materialUploadFields, adminCreateMaterial);
+router.put("/materials/:id", materialUploadFields, adminUpdateMaterial);
+router.delete("/materials/:id", adminDeleteMaterial);
 
 export default router;

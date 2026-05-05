@@ -40,3 +40,25 @@ export const avatarUpload = multer({
     }
   },
 });
+
+export const materialUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 50 * 1024 * 1024 }, // 50 MB
+  fileFilter(_req, file, cb) {
+    if (ALLOWED_MIME.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(
+        new Error(
+          "Tipo de arquivo não permitido. Use imagens ou documentos PDF/Word.",
+        ),
+      );
+    }
+  },
+});
+
+// Accepts both the main file and an optional cover image in a single request
+export const materialUploadFields = materialUpload.fields([
+  { name: "file", maxCount: 1 },
+  { name: "cover", maxCount: 1 },
+]);

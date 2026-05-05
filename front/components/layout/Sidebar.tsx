@@ -25,6 +25,7 @@ import {
   Menu,
   X,
   ArrowUpRight,
+  FolderOpen,
   LucideIcon,
 } from "lucide-react";
 
@@ -50,6 +51,12 @@ const userSections: NavSection[] = [
   {
     label: "SUPORTE",
     items: [
+      {
+        href: "/materiais",
+        label: "Materiais de Apoio",
+        icon: BookOpen,
+        minPlan: "BASIC",
+      },
       {
         href: "/chat",
         label: "Chat com Nutri",
@@ -97,6 +104,11 @@ const adminSections: NavSection[] = [
         href: "/admin/glp1-revisoes",
         label: "Revisões GLP-1",
         icon: ClipboardList,
+      },
+      {
+        href: "/admin/materiais",
+        label: "Materiais",
+        icon: FolderOpen,
       },
     ],
   },

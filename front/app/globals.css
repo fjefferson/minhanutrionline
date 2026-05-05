@@ -28,3 +28,20 @@ body {
 button, [role="button"], a {
   cursor: pointer;
 }
+
+/* ── Formulários globais ── */
+input,
+textarea,
+select {
+  color: #111827;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: #9ca3af;
+  opacity: 1;
+}
+
+input[type="color"] {
+  padding: 2px;
+}
