@@ -9,19 +9,36 @@ const FROM_NAME = "Elane Oliveira · MinhaNutri Online";
 let cachedToken: string | null = null;
 let tokenExpiresAt = 0;
 
+async function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 async function getAccessToken(): Promise<string> {
   if (cachedToken && Date.now() < tokenExpiresAt) return cachedToken;
 
-  const res = await axios.post(`${SENDPULSE_API_URL}/oauth/access_token`, {
-    grant_type: "client_credentials",
-    client_id: CLIENT_ID,
-    client_secret: CLIENT_SECRET,
-  });
+  let lastErr: unknown;
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      const res = await axios.post(
+        `${SENDPULSE_API_URL}/oauth/access_token`,
+        {
+          grant_type: "client_credentials",
+          client_id: CLIENT_ID,
+          client_secret: CLIENT_SECRET,
+        },
+        { timeout: 10_000 },
+      );
 
-  cachedToken = res.data.access_token as string;
-  // tokens duram 3600s — renova com 60s de margem
-  tokenExpiresAt = Date.now() + (res.data.expires_in - 60) * 1000;
-  return cachedToken;
+      cachedToken = res.data.access_token as string;
+      // tokens duram 3600s — renova com 60s de margem
+      tokenExpiresAt = Date.now() + (res.data.expires_in - 60) * 1000;
+      return cachedToken;
+    } catch (err) {
+      lastErr = err;
+      if (attempt < 3) await sleep(attempt * 800);
+    }
+  }
+  throw lastErr;
 }
 
 export async function sendWelcomeEmail(to: { name: string; email: string }) {
