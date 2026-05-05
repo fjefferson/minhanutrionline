@@ -16,6 +16,18 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 0.9,
     },
     {
+      url: `${base}/sobre`,
+      lastModified: new Date(),
+      changeFrequency: "monthly",
+      priority: 0.7,
+    },
+    {
+      url: `${base}/contato`,
+      lastModified: new Date(),
+      changeFrequency: "monthly",
+      priority: 0.6,
+    },
+    {
       url: `${base}/register`,
       lastModified: new Date(),
       changeFrequency: "monthly",
@@ -25,6 +37,18 @@ export default function sitemap(): MetadataRoute.Sitemap {
       url: `${base}/login`,
       lastModified: new Date(),
       changeFrequency: "monthly",
+      priority: 0.3,
+    },
+    {
+      url: `${base}/termos`,
+      lastModified: new Date(),
+      changeFrequency: "yearly",
+      priority: 0.3,
+    },
+    {
+      url: `${base}/privacidade`,
+      lastModified: new Date(),
+      changeFrequency: "yearly",
       priority: 0.3,
     },
   ];
