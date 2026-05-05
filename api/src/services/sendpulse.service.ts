@@ -738,3 +738,63 @@ export async function sendVerificationEmail(
     console.error("[SendPulse] Erro ao enviar e-mail de verificação:", err);
   }
 }
+
+// ── FORMULÁRIO DE CONTATO ────────────────────────────────────────────────────
+
+export async function sendContactEmail(data: {
+  name: string;
+  email: string;
+  subject: string;
+  message: string;
+}) {
+  const NUTRI_EMAIL = process.env.SENDPULSE_SENDER_EMAIL ?? FROM_EMAIL;
+  try {
+    const token = await getAccessToken();
+    const html = `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"/></head>
+<body style="margin:0;padding:0;background:#f0fdf4;font-family:Arial,sans-serif;">
+<table width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="padding:40px 16px;">
+<table width="600" style="max-width:600px;background:#fff;border-radius:16px;border:1px solid #e5e7eb;overflow:hidden;">
+  <tr><td bgcolor="#16a34a" align="center" style="padding:32px 40px;">
+    <h1 style="margin:0;color:#fff;font-size:22px;">MinhaNutri Online</h1>
+    <p style="margin:8px 0 0;color:#bbf7d0;font-size:14px;">Nova mensagem do formulário de contato</p>
+  </td></tr>
+  <tr><td style="padding:32px 40px;">
+    <p style="margin:0 0 20px;font-size:16px;font-weight:bold;color:#111827;">📩 Nova mensagem de contato</p>
+    <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:24px;border:1px solid #e5e7eb;border-radius:10px;overflow:hidden;">
+      <tr><td style="padding:12px 16px;background:#f9fafb;border-bottom:1px solid #e5e7eb;font-size:13px;color:#6b7280;">Nome</td>
+          <td style="padding:12px 16px;background:#f9fafb;border-bottom:1px solid #e5e7eb;font-size:14px;font-weight:bold;color:#111827;">${data.name}</td></tr>
+      <tr><td style="padding:12px 16px;border-bottom:1px solid #e5e7eb;font-size:13px;color:#6b7280;">E-mail</td>
+          <td style="padding:12px 16px;border-bottom:1px solid #e5e7eb;font-size:14px;color:#111827;"><a href="mailto:${data.email}" style="color:#16a34a;">${data.email}</a></td></tr>
+      <tr><td style="padding:12px 16px;border-bottom:1px solid #e5e7eb;font-size:13px;color:#6b7280;">Assunto</td>
+          <td style="padding:12px 16px;border-bottom:1px solid #e5e7eb;font-size:14px;color:#111827;">${data.subject}</td></tr>
+    </table>
+    <p style="margin:0 0 8px;font-size:13px;color:#6b7280;">Mensagem:</p>
+    <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:10px;padding:16px 20px;font-size:15px;color:#374151;line-height:1.7;white-space:pre-wrap;">${data.message}</div>
+    <p style="margin:24px 0 0;font-size:13px;color:#9ca3af;">Responda diretamente para: <a href="mailto:${data.email}" style="color:#16a34a;">${data.email}</a></p>
+  </td></tr>
+  <tr><td align="center" bgcolor="#f3f4f6" style="padding:16px 40px;border-top:1px solid #e5e7eb;">
+    <p style="margin:0;font-size:12px;color:#9ca3af;">© 2026 MinhaNutri Online · minhanutrionline.com.br</p>
+  </td></tr>
+</table>
+</td></tr></table>
+</body></html>`;
+
+    await axios.post(
+      `${SENDPULSE_API_URL}/smtp/emails`,
+      {
+        email: {
+          html: Buffer.from(html).toString("base64"),
+          text: `Nova mensagem de contato\n\nNome: ${data.name}\nE-mail: ${data.email}\nAssunto: ${data.subject}\n\nMensagem:\n${data.message}`,
+          subject: `[Contato] ${data.subject}`,
+          from: { name: FROM_NAME, email: FROM_EMAIL },
+          to: [{ name: "Elane Oliveira", email: NUTRI_EMAIL }],
+          reply_to: { name: data.name, email: data.email },
+        },
+      },
+      { headers: { Authorization: `Bearer ${token}` } },
+    );
+  } catch (err) {
+    console.error("[SendPulse] Erro ao enviar e-mail de contato:", err);
+    throw err;
+  }
+}

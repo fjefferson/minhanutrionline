@@ -495,7 +495,7 @@ export default function HomePage() {
                   {
                     n: "3",
                     title: "Receba orientações personalizadas",
-                    desc: "Nossa IA analisa e entrega orientações baseadas em protocolos nutricionais.",
+                    desc: "Nossa IA analisa e entrega orientações baseadas em n protocolos nutricionais.",
                   },
                   {
                     n: "4",
@@ -633,9 +633,13 @@ export default function HomePage() {
       <footer className="border-t border-gray-100 py-10 bg-white">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-5 text-sm text-gray-400">
           <div className="text-center sm:text-left">
-            <span className="font-bold text-gray-800 text-base">
-              MinhaNutri <span className="text-green-600">Online</span>
-            </span>
+            <Image
+              src="/images/logo.png"
+              alt="MinhaNutri Online"
+              width={160}
+              height={44}
+              className="h-10 w-auto object-contain mb-1"
+            />
             <p className="text-xs mt-1">
               Responsável técnica: Elane Oliveira · Nutricionista · CRN-14533
             </p>
@@ -650,14 +654,26 @@ export default function HomePage() {
             </p>
           </div>
           <div className="flex gap-5 text-xs font-medium">
+            <Link href="/sobre" className="hover:text-green-600 transition">
+              Sobre
+            </Link>
+            <Link href="/termos" className="hover:text-green-600 transition">
+              Termos de Uso
+            </Link>
+            <Link
+              href="/privacidade"
+              className="hover:text-green-600 transition"
+            >
+              Privacidade
+            </Link>
+            <Link href="/contato" className="hover:text-green-600 transition">
+              Contato
+            </Link>
             <Link href="#planos" className="hover:text-green-600 transition">
               Planos
             </Link>
             <Link href="/login" className="hover:text-green-600 transition">
               Entrar
-            </Link>
-            <Link href="/register" className="hover:text-green-600 transition">
-              Cadastrar
             </Link>
           </div>
         </div>
