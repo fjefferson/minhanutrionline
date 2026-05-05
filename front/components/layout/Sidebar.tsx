@@ -187,16 +187,15 @@ export default function Sidebar() {
     <div className="flex flex-col h-full">
       {/* Logo */}
       <div className="h-16 flex items-center justify-between px-5 shrink-0">
-        <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-lg bg-green-600 flex items-center justify-center shrink-0">
-            <span className="text-white font-bold text-sm leading-none">M</span>
-          </div>
-          <div>
-            <p className="font-bold text-gray-900 text-sm leading-tight">
-              MinhaNutri
-            </p>
-            <p className="text-[10px] text-gray-400 leading-tight">Online</p>
-          </div>
+        <div className="flex items-center">
+          <Image
+            src="/images/logo.png"
+            alt="MinhaNutri Online"
+            width={140}
+            height={40}
+            className="h-[72px] w-auto object-contain"
+            priority
+          />
         </div>
         <button
           type="button"

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useEffect, useState } from "react";
 import { useAuthStore } from "@/store/auth.store";
 
@@ -15,10 +16,17 @@ export default function HomeHeader() {
 
   return (
     <header className="border-b border-gray-100 sticky top-0 bg-white/90 backdrop-blur z-10">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 h-14 sm:h-16 flex items-center justify-between gap-2">
-        <span className="font-bold text-green-700 text-base sm:text-xl whitespace-nowrap">
-          MinhaNutri<span className="hidden sm:inline"> Online</span>
-        </span>
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 h-14 sm:h-20 flex items-center justify-between gap-2">
+        <Link href="/">
+          <Image
+            src="/images/logo.png"
+            alt="MinhaNutri Online"
+            width={200}
+            height={56}
+            className="h-[72px] w-auto object-contain"
+            priority
+          />
+        </Link>
 
         <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
           {loggedIn ? (

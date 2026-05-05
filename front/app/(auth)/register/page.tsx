@@ -205,15 +205,15 @@ export default function RegisterPage() {
       <div className="flex flex-col justify-center w-full md:w-1/2 px-8 sm:px-16 lg:px-24 py-12 bg-white overflow-y-auto">
         {/* Logo */}
         <div className="mb-8">
-          <Link href="/" className="inline-flex items-center gap-2.5">
-            <div className="w-10 h-10 rounded-xl bg-green-600 flex items-center justify-center">
-              <span className="text-white font-bold text-lg leading-none">
-                M
-              </span>
-            </div>
-            <span className="font-bold text-gray-900 text-lg tracking-tight">
-              MinhaNutri <span className="text-green-600">Online</span>
-            </span>
+          <Link href="/">
+            <Image
+              src="/images/logo.png"
+              alt="MinhaNutri Online"
+              width={400}
+              height={112}
+              className="h-24 w-auto object-contain"
+              priority
+            />
           </Link>
         </div>
 
