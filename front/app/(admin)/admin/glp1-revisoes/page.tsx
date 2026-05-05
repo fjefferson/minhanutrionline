@@ -13,6 +13,7 @@ interface Review {
   reviewResponse: string | null;
   helpful: boolean | null;
   extraNotes: string | null;
+  reviewReason: string | null;
   aiResponse: string;
   user: { id: string; name: string; email: string };
   symptoms: { symptom: { name: string; slug: string } }[];
@@ -175,6 +176,18 @@ export default function AdminGlp1RevisoesPage() {
                   </button>
                 </div>
               </div>
+
+              {/* Motivo da revisão */}
+              {r.reviewReason && (
+                <div className="px-5 pb-3">
+                  <p className="text-xs text-orange-500 font-medium mb-1">
+                    Motivo da revisão
+                  </p>
+                  <p className="text-sm text-gray-800 bg-orange-50 border border-orange-100 rounded-xl px-4 py-3">
+                    {r.reviewReason}
+                  </p>
+                </div>
+              )}
 
               {/* Observações do paciente */}
               {r.extraNotes && (

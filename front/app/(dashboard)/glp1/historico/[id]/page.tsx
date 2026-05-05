@@ -34,6 +34,7 @@ export default function Glp1ReportPage() {
   const [reviewSending, setReviewSending] = useState(false);
   const [reviewError, setReviewError] = useState("");
   const [reviewDone, setReviewDone] = useState(false);
+  const [reviewReason, setReviewReason] = useState("");
 
   useEffect(() => {
     api
@@ -65,7 +66,9 @@ export default function Glp1ReportPage() {
     setReviewSending(true);
     setReviewError("");
     try {
-      await api.post(`/glp1/report/${report.id}/review`);
+      await api.post(`/glp1/report/${report.id}/review`, {
+        reviewReason: reviewReason.trim() || undefined,
+      });
       setReviewDone(true);
       setReport((prev) => (prev ? { ...prev, reviewRequested: true } : prev));
     } catch (err: any) {
@@ -238,6 +241,13 @@ export default function Glp1ReportPage() {
                 {reviewError && (
                   <p className="text-red-500 text-xs mb-3">{reviewError}</p>
                 )}
+                <textarea
+                  value={reviewReason}
+                  onChange={(e) => setReviewReason(e.target.value)}
+                  placeholder="Descreva o motivo da revisão (opcional)..."
+                  rows={3}
+                  className="w-full text-sm border border-gray-200 rounded-xl px-3 py-2 mb-3 resize-none focus:outline-none focus:ring-2 focus:ring-purple-400 placeholder:text-gray-500 text-gray-900"
+                />
                 <button
                   onClick={requestReview}
                   disabled={reviewSending}

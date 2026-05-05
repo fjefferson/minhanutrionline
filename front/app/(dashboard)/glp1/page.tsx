@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import api from "@/lib/api";
 import Link from "next/link";
 import ReactMarkdown from "react-markdown";
+import { useAuthStore } from "@/store/auth.store";
 import {
   ThumbsUp,
   ThumbsDown,
@@ -118,6 +119,8 @@ function ProfileGateModal() {
 }
 
 export default function Glp1Page() {
+  const { user } = useAuthStore();
+  const firstName = user?.name?.split(" ")[0] ?? "";
   const [view, setView] = useState<View>("history");
   const [history, setHistory] = useState<Report[]>([]);
   const [loadingHistory, setLoadingHistory] = useState(true);
@@ -142,6 +145,7 @@ export default function Glp1Page() {
   const [reviewSending, setReviewSending] = useState(false);
   const [reviewError, setReviewError] = useState("");
   const [reviewDone, setReviewDone] = useState(false);
+  const [reviewReason, setReviewReason] = useState("");
 
   const loadHistory = () => {
     setLoadingHistory(true);
@@ -215,6 +219,7 @@ export default function Glp1Page() {
       setReviewError("");
       setView("result");
       loadHistory();
+      loadFreeStatus();
     } catch (err: any) {
       if (err?.response?.data?.code === "FREE_LIMIT_REACHED") {
         setFreeLimitReached(true);
@@ -243,7 +248,9 @@ export default function Glp1Page() {
     setReviewSending(true);
     setReviewError("");
     try {
-      await api.post(`/glp1/report/${result.id}/review`);
+      await api.post(`/glp1/report/${result.id}/review`, {
+        reviewReason: reviewReason.trim() || undefined,
+      });
       setReviewDone(true);
     } catch (err: any) {
       setReviewError(
@@ -257,104 +264,155 @@ export default function Glp1Page() {
   /* ── FORM VIEW ── */
   if (view === "form") {
     return (
-      <div className="max-w-3xl">
-        <div className="flex items-center gap-3 mb-8">
+      <div className="max-w-2xl">
+        {/* Header */}
+        <div className="flex items-center gap-3 mb-6">
           <button
             onClick={() => setView("history")}
             className="text-gray-400 hover:text-gray-600 transition"
           >
             <ArrowLeft className="w-5 h-5" />
           </button>
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Nova orientação</h1>
-            <p className="text-sm text-gray-500 mt-0.5">
-              Selecione os sintomas que está sentindo
-            </p>
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-full bg-linear-to-br from-green-500 to-emerald-600 flex items-center justify-center">
+              <Sparkles className="w-4 h-4 text-white" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-gray-900 leading-tight">
+                Assistente NutriIA
+              </p>
+              <p className="text-xs text-green-600">online</p>
+            </div>
           </div>
         </div>
 
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8">
-          {history.length > 0 && (
-            <div className="mb-5 bg-amber-50 border border-amber-100 rounded-xl px-4 py-3">
-              <p className="text-xs font-semibold text-amber-700 mb-1.5">
-                Última orientação
+        {/* Chat area */}
+        <div className="space-y-4">
+          {/* Mensagem de boas-vindas da IA */}
+          <div className="flex items-end gap-2">
+            <div className="w-8 h-8 rounded-full bg-linear-to-br from-green-500 to-emerald-600 flex items-center justify-center shrink-0">
+              <Sparkles className="w-4 h-4 text-white" />
+            </div>
+            <div className="bg-white border border-gray-100 shadow-sm rounded-2xl rounded-bl-sm px-4 py-3 max-w-xs">
+              <p className="text-sm text-gray-800">
+                Olá
+                {firstName ? (
+                  <>
+                    , <strong>{firstName}</strong>
+                  </>
+                ) : (
+                  ""
+                )}
+                ! Como está se sentindo hoje? 😊
               </p>
-              <div className="flex flex-wrap gap-1.5">
-                {history[0].symptoms.map((s) => (
-                  <span
-                    key={s.symptom.slug}
-                    className="text-xs bg-white border border-amber-200 text-amber-700 px-2.5 py-0.5 rounded-full"
+            </div>
+          </div>
+
+          {/* Bolha IA: pergunta sobre sintomas */}
+          <div className="flex items-end gap-2">
+            <div className="w-8 h-8 rounded-full bg-linear-to-br from-green-500 to-emerald-600 flex items-center justify-center shrink-0">
+              <Sparkles className="w-4 h-4 text-white" />
+            </div>
+            <div className="bg-white border border-gray-100 shadow-sm rounded-2xl rounded-bl-sm px-4 py-3 max-w-sm">
+              <p className="text-sm text-gray-800">
+                Selecione os sintomas que está sentindo:
+              </p>
+              {history.length > 0 && (
+                <p className="text-xs text-gray-400 mt-1">
+                  Na última vez:{" "}
+                  {history[0].symptoms.map((s) => s.symptom.name).join(", ")}
+                </p>
+              )}
+            </div>
+          </div>
+
+          {/* Chips de sintomas (resposta do usuário) */}
+          <div className="flex justify-end">
+            <div className="max-w-sm w-full">
+              <div className="flex flex-wrap gap-2 justify-end">
+                {symptoms.map((s) => (
+                  <button
+                    key={s.slug}
+                    onClick={() => toggle(s.slug)}
+                    className={`flex items-center gap-1.5 px-3.5 py-2 rounded-full text-sm font-medium border transition active:scale-[0.96] ${
+                      selected.includes(s.slug)
+                        ? "bg-green-600 text-white border-green-600 shadow-sm"
+                        : "bg-white text-gray-700 border-gray-200 hover:border-green-400 hover:bg-green-50"
+                    }`}
                   >
-                    {s.symptom.name}
-                  </span>
+                    {selected.includes(s.slug) && (
+                      <Check className="w-3.5 h-3.5" />
+                    )}
+                    {s.name}
+                  </button>
                 ))}
               </div>
             </div>
-          )}
-
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-7">
-            {symptoms.map((s) => (
-              <button
-                key={s.slug}
-                onClick={() => toggle(s.slug)}
-                className={`px-4 py-3 rounded-xl text-sm font-medium border transition text-left flex items-center justify-between gap-2 active:scale-[0.97] ${
-                  selected.includes(s.slug)
-                    ? "bg-green-600 text-white border-green-600 shadow-sm"
-                    : "bg-white text-gray-700 border-gray-200 hover:border-green-300 hover:bg-green-50"
-                }`}
-              >
-                <span>{s.name}</span>
-                {selected.includes(s.slug) && (
-                  <Check className="w-4 h-4 shrink-0" />
-                )}
-              </button>
-            ))}
           </div>
 
-          <div className="mb-6">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Observações adicionais{" "}
-              <span className="text-gray-400 font-normal">(opcional)</span>
-            </label>
-            <textarea
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              rows={3}
-              placeholder="Ex: Sintomas começaram há 3 dias, sinto mais após as refeições..."
-              className="w-full border border-gray-300 rounded-xl px-4 py-3 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-green-500 resize-none"
-            />
+          {/* Bolha IA: pedido de detalhes */}
+          <div className="flex items-end gap-2">
+            <div className="w-8 h-8 rounded-full bg-linear-to-br from-green-500 to-emerald-600 flex items-center justify-center shrink-0">
+              <Sparkles className="w-4 h-4 text-white" />
+            </div>
+            <div className="bg-white border border-gray-100 shadow-sm rounded-2xl rounded-bl-sm px-4 py-3 max-w-xs">
+              <p className="text-sm text-gray-800">
+                Conte mais detalhes do que você está sentindo hoje:
+              </p>
+            </div>
+          </div>
+
+          {/* Input de texto do usuário */}
+          <div className="flex justify-end">
+            <div className="w-full">
+              <textarea
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                rows={3}
+                placeholder="Ex: Sinto mais após as refeições, há 3 dias, piora à noite..."
+                className="w-full bg-white border border-gray-200 rounded-2xl rounded-br-sm px-4 py-3 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-green-500 resize-none shadow-sm"
+              />
+            </div>
           </div>
 
           {formError && (
-            <p className="text-red-500 text-sm mb-4">{formError}</p>
+            <p className="text-center text-red-500 text-sm">{formError}</p>
           )}
 
-          <button
-            onClick={handleSubmit}
-            disabled={submitting || selected.length === 0}
-            className="w-full bg-green-600 text-white py-3 rounded-xl font-semibold hover:bg-green-700 transition disabled:opacity-50 flex items-center justify-center gap-2"
-          >
-            {submitting ? (
-              <>
-                <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                Analisando com IA...
-              </>
-            ) : (
-              "Receber orientações"
-            )}
-          </button>
-
-          {selected.length > 0 && !submitting && (
-            <p className="text-center text-xs text-gray-400 mt-3">
-              {selected.length} sintoma{selected.length > 1 ? "s" : ""}{" "}
-              selecionado{selected.length > 1 ? "s" : ""}
-            </p>
-          )}
+          {/* Botão enviar */}
+          <div className="flex justify-end pt-1">
+            <button
+              onClick={handleSubmit}
+              disabled={submitting || selected.length === 0}
+              className="flex items-center gap-2 bg-green-600 text-white px-6 py-2.5 rounded-full font-semibold text-sm hover:bg-green-700 transition disabled:opacity-50 shadow-sm"
+            >
+              {submitting ? (
+                <>
+                  <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  Analisando...
+                </>
+              ) : (
+                <>
+                  <Sparkles className="w-4 h-4" />
+                  Receber orientação
+                </>
+              )}
+            </button>
+          </div>
 
           {submitting && (
-            <p className="text-center text-xs text-gray-400 mt-3 animate-pulse">
-              Isso pode levar alguns segundos...
-            </p>
+            <div className="flex items-end gap-2">
+              <div className="w-8 h-8 rounded-full bg-linear-to-br from-green-500 to-emerald-600 flex items-center justify-center shrink-0">
+                <Sparkles className="w-4 h-4 text-white" />
+              </div>
+              <div className="bg-white border border-gray-100 shadow-sm rounded-2xl rounded-bl-sm px-4 py-3">
+                <div className="flex gap-1 items-center">
+                  <span className="w-2 h-2 bg-green-400 rounded-full animate-bounce [animation-delay:0ms]" />
+                  <span className="w-2 h-2 bg-green-400 rounded-full animate-bounce [animation-delay:150ms]" />
+                  <span className="w-2 h-2 bg-green-400 rounded-full animate-bounce [animation-delay:300ms]" />
+                </div>
+              </div>
+            </div>
           )}
         </div>
       </div>
@@ -365,24 +423,63 @@ export default function Glp1Page() {
   if (view === "result" && result) {
     return (
       <div className="max-w-3xl">
-        <div className="flex items-center gap-3 mb-8">
+        {/* Header chat */}
+        <div className="flex items-center gap-3 mb-6">
           <button
             onClick={() => setView("history")}
             className="text-gray-400 hover:text-gray-600 transition"
           >
             <ArrowLeft className="w-5 h-5" />
           </button>
-          <div>
-            <h1 className="text-xl font-bold text-gray-900">
-              Orientação personalizada
-            </h1>
-            <p className="text-xs text-gray-400 mt-0.5">
-              {new Date(result.createdAt).toLocaleString("pt-BR")}
-            </p>
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-full bg-linear-to-br from-green-500 to-emerald-600 flex items-center justify-center">
+              <Sparkles className="w-4 h-4 text-white" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-gray-900 leading-tight">
+                Assistente NutriIA
+              </p>
+              <p className="text-xs text-gray-400">
+                {new Date(result.createdAt).toLocaleString("pt-BR")}
+              </p>
+            </div>
           </div>
         </div>
 
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 mb-5">
+        {/* Aviso de IA especializada */}
+        <div className="flex items-center gap-1.5 px-1 py-3 border-b border-gray-100 mb-2">
+          <Zap className="w-3 h-3 text-green-500 shrink-0" />
+          <p className="text-[11px] text-gray-400 leading-tight">
+            Assistente treinado especificamente para pacientes em uso de GLP-1 —
+            não é uma IA genérica.
+          </p>
+        </div>
+
+        <div className="space-y-4">
+          {/* Mensagem do usuário: sintomas selecionados */}
+          <div className="flex justify-end">
+            <div className="bg-green-600 text-white rounded-2xl rounded-br-sm px-4 py-3 max-w-sm">
+              <p className="text-xs font-semibold mb-1.5 opacity-80">
+                Você reportou:
+              </p>
+              <div className="flex flex-wrap gap-1.5">
+                {result.symptoms.map((s) => (
+                  <span
+                    key={s.symptom.slug}
+                    className="bg-white/20 text-white text-xs px-2.5 py-0.5 rounded-full font-medium"
+                  >
+                    {s.symptom.name}
+                  </span>
+                ))}
+              </div>
+              {notes.trim() && (
+                <p className="text-xs text-white/90 mt-2 leading-relaxed">
+                  {notes.trim()}
+                </p>
+              )}
+            </div>
+          </div>
+
           {/* Evolução vs. orientação anterior */}
           {(() => {
             const prevReport = history.find((r) => r.id !== result.id);
@@ -395,187 +492,181 @@ export default function Glp1Page() {
             const newSyms = [...currSlugs].filter((s) => !prevSlugs.has(s));
             if (improved.length === 0 && newSyms.length === 0) return null;
             return (
-              <div className="mb-5 rounded-xl border border-gray-100 bg-gray-50 p-4">
-                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">
-                  Evolução vs. orientação anterior
-                </p>
-                {improved.length > 0 && (
-                  <div className="flex items-start gap-2 mb-2">
-                    <TrendingDown className="w-4 h-4 text-green-600 shrink-0 mt-0.5" />
-                    <div>
-                      <p className="text-xs font-semibold text-green-700">
-                        Melhorou
-                      </p>
-                      <div className="flex flex-wrap gap-1.5 mt-1">
-                        {improved.map((slug) => {
-                          const sym = prevReport.symptoms.find(
-                            (s) => s.symptom.slug === slug,
-                          );
-                          return (
-                            <span
-                              key={slug}
-                              className="text-xs bg-green-100 text-green-700 px-2.5 py-0.5 rounded-full font-medium"
-                            >
-                              {sym?.symptom.name ?? slug}
-                            </span>
-                          );
-                        })}
-                      </div>
+              <div className="flex justify-end">
+                <div className="bg-gray-100 rounded-2xl rounded-br-sm px-4 py-3 max-w-sm space-y-2">
+                  {improved.length > 0 && (
+                    <div className="flex items-center gap-1.5">
+                      <TrendingDown className="w-3.5 h-3.5 text-green-600 shrink-0" />
+                      <span className="text-xs text-green-700 font-medium">
+                        Melhorou:{" "}
+                        {improved
+                          .map(
+                            (slug) =>
+                              prevReport.symptoms.find(
+                                (s) => s.symptom.slug === slug,
+                              )?.symptom.name ?? slug,
+                          )
+                          .join(", ")}
+                      </span>
                     </div>
-                  </div>
-                )}
-                {newSyms.length > 0 && (
-                  <div className="flex items-start gap-2">
-                    <TrendingUp className="w-4 h-4 text-orange-500 shrink-0 mt-0.5" />
-                    <div>
-                      <p className="text-xs font-semibold text-orange-600">
-                        Novo sintoma
-                      </p>
-                      <div className="flex flex-wrap gap-1.5 mt-1">
-                        {newSyms.map((slug) => {
-                          const sym = symptoms.find((s) => s.slug === slug);
-                          return (
-                            <span
-                              key={slug}
-                              className="text-xs bg-orange-100 text-orange-700 px-2.5 py-0.5 rounded-full font-medium"
-                            >
-                              {sym?.name ?? slug}
-                            </span>
-                          );
-                        })}
-                      </div>
+                  )}
+                  {newSyms.length > 0 && (
+                    <div className="flex items-center gap-1.5">
+                      <TrendingUp className="w-3.5 h-3.5 text-orange-500 shrink-0" />
+                      <span className="text-xs text-orange-600 font-medium">
+                        Novo:{" "}
+                        {newSyms
+                          .map(
+                            (slug) =>
+                              symptoms.find((s) => s.slug === slug)?.name ??
+                              slug,
+                          )
+                          .join(", ")}
+                      </span>
                     </div>
-                  </div>
-                )}
+                  )}
+                </div>
               </div>
             );
           })()}
 
-          <div className="flex flex-wrap gap-2 mb-6">
-            {selected.map((s) => {
-              const sym = symptoms.find((x) => x.slug === s);
-              return (
-                <span
-                  key={s}
-                  className="bg-green-50 text-green-700 text-xs px-3 py-1 rounded-full font-medium"
+          {/* Resposta da IA em bolha */}
+          <div className="flex items-end gap-2">
+            <div className="w-8 h-8 rounded-full bg-linear-to-br from-green-500 to-emerald-600 flex items-center justify-center shrink-0">
+              <Sparkles className="w-4 h-4 text-white" />
+            </div>
+            <div className="bg-white border border-gray-100 shadow-sm rounded-2xl rounded-bl-sm px-5 py-4 flex-1">
+              <div className="prose prose-sm max-w-none text-gray-700 leading-relaxed">
+                <ReactMarkdown
+                  components={{
+                    p: ({ children }) => (
+                      <p className="mb-3 last:mb-0">{children}</p>
+                    ),
+                    strong: ({ children }) => (
+                      <strong className="font-semibold text-gray-900">
+                        {children}
+                      </strong>
+                    ),
+                    ul: ({ children }) => (
+                      <ul className="list-disc pl-5 mb-3 space-y-1">
+                        {children}
+                      </ul>
+                    ),
+                    ol: ({ children }) => (
+                      <ol className="list-decimal pl-5 mb-3 space-y-1">
+                        {children}
+                      </ol>
+                    ),
+                  }}
                 >
-                  {sym?.name ?? s}
-                </span>
-              );
-            })}
-          </div>
+                  {result.aiResponse}
+                </ReactMarkdown>
+              </div>
 
-          <div className="prose prose-sm max-w-none text-gray-700 leading-relaxed bg-gray-50 rounded-xl p-5 mb-6">
-            <ReactMarkdown
-              components={{
-                p: ({ children }) => (
-                  <p className="mb-4 last:mb-0">{children}</p>
-                ),
-                strong: ({ children }) => (
-                  <strong className="font-semibold text-gray-900">
-                    {children}
-                  </strong>
-                ),
-                ul: ({ children }) => (
-                  <ul className="list-disc pl-5 mb-4 space-y-1">{children}</ul>
-                ),
-                ol: ({ children }) => (
-                  <ol className="list-decimal pl-5 mb-4 space-y-1">
-                    {children}
-                  </ol>
-                ),
-              }}
-            >
-              {result.aiResponse}
-            </ReactMarkdown>
-          </div>
-
-          <div className="bg-blue-50 rounded-xl p-4 mb-6">
-            <p className="text-xs text-blue-600">
-              <strong>Lembrete:</strong> Estas orientações são educacionais. Em
-              caso de sintomas graves ou persistentes, consulte seu médico ou
-              nutricionista.
-            </p>
-          </div>
-
-          <div className="border-t border-gray-100 pt-5">
-            <p className="text-sm font-medium text-gray-700 mb-3">
-              Esta orientação foi útil para você?
-            </p>
-            <div className="flex gap-3">
-              <button
-                onClick={() => rate(true)}
-                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium border transition ${
-                  rating === true
-                    ? "bg-green-600 text-white border-green-600"
-                    : "border-gray-200 text-gray-600 hover:border-green-400 hover:text-green-600"
-                }`}
-              >
-                <ThumbsUp className="w-4 h-4" />
-                Sim, foi útil
-              </button>
-              <button
-                onClick={() => rate(false)}
-                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium border transition ${
-                  rating === false
-                    ? "bg-red-500 text-white border-red-500"
-                    : "border-gray-200 text-gray-600 hover:border-red-300 hover:text-red-500"
-                }`}
-              >
-                <ThumbsDown className="w-4 h-4" />
-                Não ajudou
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 mb-5">
-          <div className="flex items-start gap-4">
-            <div className="w-10 h-10 bg-purple-50 rounded-xl flex items-center justify-center shrink-0">
-              <RefreshCw className="w-5 h-5 text-purple-600" />
-            </div>
-            <div className="flex-1">
-              <p className="font-semibold text-gray-900 text-sm">
-                Pedir revisão da nutricionista
-              </p>
-              <p className="text-xs text-gray-500 mt-1 mb-4">
-                Não ficou satisfeito? Solicite uma revisão humana.{" "}
-                <strong>Limite de 1 revisão por dia.</strong>
-              </p>
-              {reviewDone ? (
-                <div className="flex items-center gap-2 text-green-600 text-sm font-medium">
-                  <CheckCircle className="w-4 h-4" />
-                  Revisão solicitada — a nutricionista entrará em contato em
-                  breve.
+              <div className="mt-4 pt-4 border-t border-gray-100">
+                <div className="bg-blue-50 rounded-xl px-3 py-2 mb-4">
+                  <p className="text-xs text-blue-600">
+                    <strong>Lembrete:</strong> Estas orientações são
+                    educacionais. Em caso de sintomas graves ou persistentes,
+                    consulte seu médico ou nutricionista.
+                  </p>
                 </div>
-              ) : (
-                <>
-                  {reviewError && (
-                    <p className="text-red-500 text-xs mb-3">{reviewError}</p>
-                  )}
+                <p className="text-sm font-medium text-gray-700 mb-2">
+                  Esta orientação foi útil para você?
+                </p>
+                <div className="flex gap-3">
                   <button
-                    onClick={requestReview}
-                    disabled={reviewSending}
-                    className="bg-purple-600 text-white px-5 py-2 rounded-xl text-sm font-medium hover:bg-purple-700 transition disabled:opacity-60"
+                    onClick={() => rate(true)}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium border transition ${
+                      rating === true
+                        ? "bg-green-600 text-white border-green-600"
+                        : "border-gray-200 text-gray-600 hover:border-green-400 hover:text-green-600"
+                    }`}
                   >
-                    {reviewSending ? "Enviando..." : "Solicitar revisão"}
+                    <ThumbsUp className="w-4 h-4" />
+                    Sim, foi útil
                   </button>
-                </>
-              )}
+                  <button
+                    onClick={() => rate(false)}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium border transition ${
+                      rating === false
+                        ? "bg-red-500 text-white border-red-500"
+                        : "border-gray-200 text-gray-600 hover:border-red-300 hover:text-red-500"
+                    }`}
+                  >
+                    <ThumbsDown className="w-4 h-4" />
+                    Não ajudou
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
-        </div>
 
-        <button
-          onClick={() => setView("history")}
-          className="w-full border border-gray-200 text-gray-700 py-3 rounded-xl font-medium hover:bg-gray-50 transition text-sm"
-        >
-          Voltar ao histórico
-        </button>
+          {/* Revisão */}
+          <div className="flex items-end gap-2">
+            <div className="w-8 h-8 shrink-0" />
+            <div className="bg-white border border-gray-100 shadow-sm rounded-2xl rounded-bl-sm px-4 py-3 flex-1">
+              <div className="flex items-start gap-3">
+                <div className="w-8 h-8 bg-purple-50 rounded-xl flex items-center justify-center shrink-0">
+                  <RefreshCw className="w-4 h-4 text-purple-600" />
+                </div>
+                <div className="flex-1">
+                  <p className="font-semibold text-gray-900 text-sm">
+                    Pedir revisão da nutricionista
+                  </p>
+                  <p className="text-xs text-gray-500 mt-0.5 mb-3">
+                    Não ficou satisfeito? Solicite uma revisão humana.{" "}
+                    <strong>Limite de 1 revisão por dia.</strong>
+                  </p>
+                  {reviewDone ? (
+                    <div className="flex items-center gap-2 text-green-600 text-sm font-medium">
+                      <CheckCircle className="w-4 h-4" />
+                      Revisão solicitada — a nutricionista entrará em contato em
+                      breve.
+                    </div>
+                  ) : (
+                    <>
+                      <textarea
+                        value={reviewReason}
+                        onChange={(e) => setReviewReason(e.target.value)}
+                        placeholder="Descreva o motivo da revisão (opcional)..."
+                        rows={3}
+                        className="w-full text-sm border border-gray-200 rounded-xl px-3 py-2 mb-3 resize-none focus:outline-none focus:ring-2 focus:ring-purple-400 placeholder:text-gray-500 text-gray-900"
+                      />
+                      {reviewError && (
+                        <p className="text-red-500 text-xs mb-2">
+                          {reviewError}
+                        </p>
+                      )}
+                      <button
+                        onClick={requestReview}
+                        disabled={reviewSending}
+                        className="bg-purple-600 text-white px-5 py-2 rounded-full text-sm font-medium hover:bg-purple-700 transition disabled:opacity-60"
+                      >
+                        {reviewSending ? "Enviando..." : "Solicitar revisão"}
+                      </button>
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Nova orientação */}
+          <div className="flex justify-end pt-1">
+            <button
+              onClick={() => {
+                setView("history");
+              }}
+              className="flex items-center gap-2 border border-gray-200 text-gray-600 px-5 py-2 rounded-full text-sm font-medium hover:bg-gray-50 transition"
+            >
+              Voltar ao histórico
+            </button>
+          </div>
+        </div>
       </div>
     );
   }
-
   /* ── HISTORY VIEW (default) ── */
   return (
     <div className="max-w-3xl">
@@ -617,7 +708,9 @@ export default function Glp1Page() {
 
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Orientações GLP-1</h1>
+          <h1 className="text-2xl font-bold text-gray-900">
+            Orientações GLP-1
+          </h1>
           <p className="text-gray-500 mt-1 text-sm">
             Orientações nutricionais personalizadas para os seus sintomas
           </p>

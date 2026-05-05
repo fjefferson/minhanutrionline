@@ -434,14 +434,8 @@ export default function ChatPage() {
             >
               <div className="flex items-center gap-3">
                 <div className="relative shrink-0">
-                  <div className="w-10 h-10 rounded-full overflow-hidden">
-                    <Image
-                      src="/images/avatar_atendimento_elane_oliveira_nutri.jpg"
-                      alt="Elane"
-                      width={40}
-                      height={40}
-                      className="w-full h-full object-cover object-top"
-                    />
+                  <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center">
+                    <span className="text-sm font-bold text-green-700">E</span>
                   </div>
                   <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 border-2 border-white rounded-full" />
                 </div>
@@ -490,14 +484,8 @@ export default function ChatPage() {
                   }`}
                 >
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full overflow-hidden opacity-60 shrink-0">
-                      <Image
-                        src="/images/avatar_atendimento_elane_oliveira_nutri.jpg"
-                        alt="Elane"
-                        width={40}
-                        height={40}
-                        className="w-full h-full object-cover object-top"
-                      />
+                    <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center opacity-60 shrink-0">
+                      <span className="text-sm font-bold text-gray-500">E</span>
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between gap-1 mb-0.5">

@@ -230,6 +230,7 @@ export async function rateReport(req: AuthenticatedRequest, res: Response) {
 export async function requestReview(req: AuthenticatedRequest, res: Response) {
   const userId = req.user!.userId;
   const { id } = req.params as { id: string };
+  const { reviewReason } = req.body as { reviewReason?: string };
 
   const report = await prisma.symptomReport.findUnique({ where: { id } });
   if (!report || report.userId !== userId) {
@@ -263,7 +264,11 @@ export async function requestReview(req: AuthenticatedRequest, res: Response) {
 
   const updated = await prisma.symptomReport.update({
     where: { id },
-    data: { reviewRequested: true, reviewRequestedAt: new Date() },
+    data: {
+      reviewRequested: true,
+      reviewRequestedAt: new Date(),
+      reviewReason: reviewReason?.trim() ?? null,
+    },
   });
 
   res.json(updated);

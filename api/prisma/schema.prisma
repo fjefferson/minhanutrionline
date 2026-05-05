@@ -202,6 +202,7 @@ model SymptomReport {
   helpful           Boolean?
   reviewRequested   Boolean   @default(false)
   reviewRequestedAt DateTime?
+  reviewReason      String?
   reviewResolvedAt  DateTime?
   reviewResponse    String?
 
