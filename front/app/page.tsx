@@ -18,18 +18,29 @@ import PlansSection from "@/components/home/PlansSection";
 import FaqSection from "@/components/home/FaqSection";
 
 export const metadata: Metadata = {
-  title:
-    "Acompanhamento Nutricional para Canetas GLP-1 | Ozempic, Wegovy, Mounjaro",
+  title: "Acompanhamento Nutricional GLP-1 | MinhaNutri Online",
   description:
-    "Plataforma criada por nutricionista especialista em GLP-1. Controle seus sintomas, receba orientações personalizadas por IA e acompanhe seu emagrecimento com Ozempic, Wegovy ou Mounjaro. Experimente grátis.",
+    "Nutricionista especialista em GLP-1. Controle sintomas, plano alimentar e consultas online para quem usa Ozempic, Wegovy ou Mounjaro.",
   alternates: {
     canonical: "https://minhanutrionline.com.br",
   },
   openGraph: {
-    title: "Acompanhamento Nutricional para GLP-1 — Ozempic, Wegovy, Mounjaro",
+    title: "Acompanhamento Nutricional GLP-1 | MinhaNutri Online",
     description:
-      "Plataforma criada pela nutricionista Elane Oliveira (CRN-14533). Controle de sintomas, plano alimentar personalizado e consultas online para quem usa canetas emagrecedoras.",
+      "Nutricionista especialista em GLP-1. Controle sintomas, plano alimentar personalizado e consultas online para Ozempic, Wegovy e Mounjaro.",
     url: "https://minhanutrionline.com.br",
+    images: [
+      {
+        url: "https://minhanutrionline.com.br/images/og-image.jpg",
+        width: 1200,
+        height: 630,
+        alt: "MinhaNutri Online — Acompanhamento nutricional para GLP-1",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    images: ["https://minhanutrionline.com.br/images/og-image.jpg"],
   },
 };
 
