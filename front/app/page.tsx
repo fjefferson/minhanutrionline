@@ -11,7 +11,6 @@ import {
   Zap,
   ShieldCheck,
   Leaf,
-  Instagram,
   Mail,
 } from "lucide-react";
 import HomeHeader from "@/components/layout/HomeHeader";
