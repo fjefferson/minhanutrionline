@@ -103,6 +103,10 @@ export default function ConsultasPage() {
   const [bookingHour, setBookingHour] = useState<number | null>(null);
   const [booking, setBooking] = useState(false);
   const [bookError, setBookError] = useState<string | null>(null);
+  const [bookingSuccess, setBookingSuccess] = useState<{
+    date: string;
+    hour: number;
+  } | null>(null);
 
   // Cancel confirm dialog
   const [cancelConfirm, setCancelConfirm] = useState<string | null>(null); // consultation id
@@ -142,6 +146,10 @@ export default function ConsultasPage() {
         }
       })
       .catch(() => {});
+
+    // Poll consultations every 30s to reflect nutritionist changes (confirm, reschedule, cancel)
+    const pollInterval = setInterval(() => load(), 30_000);
+    return () => clearInterval(pollInterval);
   }, [load]);
 
   // Fetch blocked dates whenever month changes — and poll every 30s for reactivity
@@ -230,10 +238,11 @@ export default function ConsultasPage() {
         date: selectedDate,
         hour: bookingHour,
       });
-      toast.success("Consulta agendada com sucesso!");
+      setBookingSuccess({ date: selectedDate, hour: bookingHour });
       setSelectedDate(null);
       setBookingHour(null);
       await load();
+      toast.success("Consulta agendada com sucesso!");
     } catch (err: unknown) {
       const msg =
         (err as { response?: { data?: { message?: string } } })?.response?.data
@@ -275,8 +284,23 @@ export default function ConsultasPage() {
 
   const todayStr = TODAY.toLocaleDateString("en-CA");
 
+  // Consultation lookup by date for calendar event blocks
+  const consultationByDate = new Map<string, Consultation>();
+  consultations.forEach((c) => {
+    if (c.status !== "CANCELLED") {
+      consultationByDate.set(isoToBrazilDateStr(c.scheduledAt), c);
+    }
+  });
+
+  const EVENT_PILL: Record<string, string> = {
+    PENDING: "bg-yellow-100 text-yellow-700",
+    CONFIRMED: "bg-green-100 text-green-700",
+    COMPLETED: "bg-blue-100 text-blue-600",
+    CANCELLED: "",
+  };
+
   return (
-    <div className="max-w-5xl mx-auto px-4 py-8 space-y-6">
+    <div className="max-w-6xl px-4 pt-4 pb-8">
       <ConfirmDialog
         open={!!cancelConfirm}
         title="Cancelar consulta?"
@@ -288,45 +312,28 @@ export default function ConsultasPage() {
         onCancel={() => setCancelConfirm(null)}
       />
 
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">Consultas Online</h1>
-        <p className="text-gray-500 text-sm mt-1">
-          Agende sua consulta com a nutricionista
-        </p>
-      </div>
-
-      {profileIncomplete && (
-        <div className="flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3.5">
-          <AlertTriangle size={18} className="text-amber-500 shrink-0 mt-0.5" />
-          <div className="flex-1 text-sm">
-            <p className="font-medium text-amber-800">
-              Seu perfil nutricional está incompleto
-            </p>
-            <p className="text-amber-700 mt-0.5">
-              Preencha seu perfil antes de agendar —{" "}
-              <a
-                href="/perfil"
-                className="underline font-medium hover:text-amber-900"
-              >
-                completar agora
-              </a>
-              . Isso é essencial para a nutricionista preparar seu atendimento.
+      {/* Alerts */}
+      <div className="space-y-3 mb-6">
+        {profileIncomplete && (
+          <div className="flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3.5">
+            <AlertTriangle
+              size={16}
+              className="text-amber-500 shrink-0 mt-0.5"
+            />
+            <p className="text-sm text-amber-800">
+              Perfil nutricional incompleto —{" "}
+              <a href="/perfil" className="underline font-medium">
+                complete aqui
+              </a>{" "}
+              antes de agendar.
             </p>
           </div>
-        </div>
-      )}
-
-      {/* Eligibility banner — shown when user cannot book yet */}
-      {eligibility && !eligibility.canBook && (
-        <div className="flex items-start gap-3 bg-blue-50 border border-blue-200 rounded-xl px-4 py-4">
-          <CalendarDays size={20} className="text-blue-500 shrink-0 mt-0.5" />
-          <div className="flex-1 text-sm">
-            <p className="font-semibold text-blue-900">
-              Agendamento ainda não disponível
-            </p>
-            <p className="text-blue-700 mt-1">{eligibility.reason}</p>
-            <p className="text-blue-600 text-xs mt-1">
-              Disponível a partir de{" "}
+        )}
+        {eligibility && !eligibility.canBook && (
+          <div className="flex items-start gap-3 bg-blue-50 border border-blue-200 rounded-xl px-4 py-3.5">
+            <CalendarDays size={16} className="text-blue-500 shrink-0 mt-0.5" />
+            <p className="text-sm text-blue-800">
+              {eligibility.reason} — disponível a partir de{" "}
               <strong>
                 {new Date(
                   eligibility.earliestDate + "T12:00:00Z",
@@ -338,264 +345,424 @@ export default function ConsultasPage() {
               </strong>
             </p>
           </div>
-        </div>
-      )}
+        )}
+      </div>
 
-      {/* ── BOOKING SECTION ─────────────────────────────────────────── */}
-      <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
-        {/* Steps indicator */}
-        <div className="flex items-center gap-2 px-5 py-3.5 border-b border-gray-100 bg-gray-50/60">
-          <div
-            className={`flex items-center gap-1.5 text-xs font-semibold ${!selectedDate ? "text-green-700" : "text-gray-400"}`}
-          >
-            <span
-              className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold ${!selectedDate ? "bg-green-600 text-white" : "bg-gray-200 text-gray-500"}`}
-            >
-              1
-            </span>
-            Escolher data
-          </div>
-          <ChevronRight size={13} className="text-gray-300" />
-          <div
-            className={`flex items-center gap-1.5 text-xs font-semibold ${selectedDate && bookingHour === null ? "text-green-700" : "text-gray-400"}`}
-          >
-            <span
-              className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold ${selectedDate && bookingHour === null ? "bg-green-600 text-white" : selectedDate ? "bg-gray-200 text-gray-500" : "bg-gray-100 text-gray-300"}`}
-            >
-              2
-            </span>
-            Escolher horário
-          </div>
-          <ChevronRight size={13} className="text-gray-300" />
-          <div
-            className={`flex items-center gap-1.5 text-xs font-semibold ${bookingHour !== null ? "text-green-700" : "text-gray-400"}`}
-          >
-            <span
-              className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold ${bookingHour !== null ? "bg-green-600 text-white" : "bg-gray-100 text-gray-300"}`}
-            >
-              3
-            </span>
-            Confirmar
+      {/* ── MAIN LAYOUT ── */}
+      <div className="flex flex-col lg:flex-row gap-5">
+        {/* ── LEFT: Upcoming events ── */}
+        <div className="lg:w-72 shrink-0">
+          <div className="bg-white rounded-2xl border border-gray-200 p-5 h-full">
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">
+              Agenda
+            </p>
+            <h2 className="text-lg font-bold text-gray-900 mb-4">
+              Próximas consultas
+            </h2>
+
+            {loading ? (
+              <div className="space-y-3">
+                {[1, 2].map((i) => (
+                  <div
+                    key={i}
+                    className="h-16 rounded-xl bg-gray-100 animate-pulse"
+                  />
+                ))}
+              </div>
+            ) : upcoming.length === 0 ? (
+              <div className="text-center py-8 text-gray-400">
+                <CalendarDays size={32} className="mx-auto mb-2 opacity-30" />
+                <p className="text-sm">Nenhuma consulta agendada</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {upcoming.map((c) => {
+                  const bz = new Date(
+                    new Date(c.scheduledAt).getTime() - 3 * 3600_000,
+                  );
+                  const hh = String(bz.getUTCHours()).padStart(2, "0");
+                  const canCancel =
+                    new Date(c.scheduledAt).getTime() - Date.now() >
+                    publicConfig.cancelDays * 86_400_000;
+                  return (
+                    <div
+                      key={c.id}
+                      className="group flex items-start gap-3 p-3 rounded-xl hover:bg-gray-50 transition"
+                    >
+                      <span
+                        className={`mt-1 w-2 h-2 rounded-full shrink-0 ${c.status === "CONFIRMED" ? "bg-green-500" : "bg-yellow-400"}`}
+                      />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs text-gray-400 font-medium">
+                          {new Date(c.scheduledAt).toLocaleDateString("pt-BR", {
+                            weekday: "short",
+                            day: "numeric",
+                            month: "short",
+                          })}{" "}
+                          · {hh}:00
+                        </p>
+                        <p className="text-sm font-semibold text-gray-800 mt-0.5 truncate">
+                          Consulta nutricional
+                        </p>
+                        <div className="flex items-center gap-2 mt-1">
+                          <span
+                            className={`text-[11px] px-1.5 py-0.5 rounded-full font-medium ${STATUS_COLOR[c.status]}`}
+                          >
+                            {STATUS_LABEL[c.status]}
+                          </span>
+                          {c.meetingLink && (
+                            <a
+                              href={c.meetingLink}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-[11px] text-green-700 flex items-center gap-0.5 hover:underline"
+                            >
+                              <Video size={10} /> Entrar
+                            </a>
+                          )}
+                        </div>
+                      </div>
+                      {canCancel && (
+                        <button
+                          type="button"
+                          onClick={() => setCancelConfirm(c.id)}
+                          className="opacity-0 group-hover:opacity-100 text-red-400 hover:text-red-600 transition shrink-0"
+                          title="Cancelar"
+                        >
+                          <X size={14} />
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Past history */}
+            {past.length > 0 && (
+              <>
+                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mt-6 mb-3">
+                  Histórico
+                </p>
+                <div className="space-y-2">
+                  {past.slice(0, 3).map((c) => {
+                    const bz = new Date(
+                      new Date(c.scheduledAt).getTime() - 3 * 3600_000,
+                    );
+                    const hh = String(bz.getUTCHours()).padStart(2, "0");
+                    return (
+                      <div
+                        key={c.id}
+                        className="flex items-start gap-3 px-1 opacity-60"
+                      >
+                        <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-gray-300 shrink-0" />
+                        <div>
+                          <p className="text-xs text-gray-500">
+                            {new Date(c.scheduledAt).toLocaleDateString(
+                              "pt-BR",
+                              {
+                                day: "numeric",
+                                month: "short",
+                                year: "2-digit",
+                              },
+                            )}{" "}
+                            · {hh}:00
+                          </p>
+                          <span
+                            className={`text-[11px] px-1.5 py-0.5 rounded-full font-medium ${STATUS_COLOR[c.status]}`}
+                          >
+                            {STATUS_LABEL[c.status]}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </>
+            )}
           </div>
         </div>
 
-        <div className="grid md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-gray-100">
-          {/* ── CALENDAR ── hidden on mobile when a date is selected */}
-          <div className={`p-5 ${selectedDate ? "hidden md:block" : ""}`}>
-            <div className="flex items-center justify-between mb-4">
-              <button
-                type="button"
-                onClick={prevMonth}
-                disabled={
-                  calYear === TODAY.getFullYear() &&
-                  calMonth === TODAY.getMonth()
-                }
-                className="flex items-center justify-center w-8 h-8 rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-100 hover:border-gray-300 transition disabled:opacity-20 disabled:cursor-not-allowed"
-              >
-                <ChevronLeft size={16} />
-              </button>
-              <span className="font-semibold text-gray-900 text-sm select-none">
+        {/* ── RIGHT: Calendar + slot picker ── */}
+        <div className="flex-1 min-w-0 space-y-4">
+          {/* Calendar card */}
+          <div className="bg-white rounded-2xl border border-gray-200 p-5">
+            {/* Calendar header */}
+            <div className="flex items-center justify-between mb-5">
+              <h2 className="text-lg font-bold text-gray-900">
                 {MONTH_NAMES[calMonth]} {calYear}
-              </span>
-              <button
-                type="button"
-                onClick={nextMonth}
-                className="flex items-center justify-center w-8 h-8 rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-100 hover:border-gray-300 transition"
-              >
-                <ChevronRight size={16} />
-              </button>
+              </h2>
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={prevMonth}
+                  disabled={
+                    calYear === TODAY.getFullYear() &&
+                    calMonth === TODAY.getMonth()
+                  }
+                  className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 transition disabled:opacity-20 disabled:cursor-not-allowed"
+                >
+                  <ChevronLeft size={16} />
+                </button>
+                <button
+                  type="button"
+                  onClick={nextMonth}
+                  className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 transition"
+                >
+                  <ChevronRight size={16} />
+                </button>
+              </div>
             </div>
 
-            {/* Days of week header */}
-            <div className="grid grid-cols-7 mb-1">
+            {/* DOW header */}
+            <div className="grid grid-cols-7 mb-2">
               {DOW_LABELS.map((d) => (
                 <div
                   key={d}
-                  className="text-center text-xs font-medium text-gray-400 py-1 select-none"
+                  className="text-center text-xs font-semibold text-gray-400 py-1 select-none"
                 >
                   {d}
                 </div>
               ))}
             </div>
 
-            {/* Days grid */}
-            <div className="grid grid-cols-7 gap-1">
+            {/* Days grid — full height cells */}
+            <div className="grid grid-cols-7 border-l border-t border-gray-100">
               {Array.from({ length: firstDayOfMonth }).map((_, i) => (
-                <div key={`empty-${i}`} />
+                <div
+                  key={`e-${i}`}
+                  className="border-r border-b border-gray-100 min-h-18"
+                />
               ))}
               {Array.from({ length: daysInMonth }, (_, i) => i + 1).map(
                 (day) => {
                   const dateStr = calDateStr(day);
                   const isToday = dateStr === todayStr;
                   const isBlocked = blockedDates.has(dateStr);
-                  const isBooked = bookedDates.has(dateStr);
                   const isSelected = selectedDate === dateStr;
+                  const event = consultationByDate.get(dateStr);
                   const disabled =
                     !isBizDay(day) ||
                     isBeforeToday(day) ||
                     isBeforeEarliestDate(day) ||
-                    isBlocked;
-                  const available = !disabled && !isBooked;
+                    isBlocked ||
+                    !!event;
+                  const available = !disabled;
 
                   return (
-                    <button
+                    <div
                       key={day}
-                      type="button"
-                      disabled={disabled || isBooked}
-                      onClick={() =>
-                        setSelectedDate(isSelected ? null : dateStr)
-                      }
-                      title={
-                        isBooked
-                          ? "Já agendado"
-                          : isBlocked
-                            ? "Data bloqueada"
-                            : disabled
-                              ? "Indisponível"
-                              : undefined
-                      }
+                      onClick={() => {
+                        if (available)
+                          setSelectedDate(isSelected ? null : dateStr);
+                      }}
                       className={[
-                        "relative h-10 w-full flex items-center justify-center rounded-lg text-sm font-medium transition-all select-none",
-                        isSelected
-                          ? "bg-green-600 text-white shadow-sm"
-                          : isBooked
-                            ? "bg-green-100 text-green-700 cursor-default"
-                            : isBlocked
-                              ? "bg-red-50 text-red-300 cursor-not-allowed"
-                              : available
-                                ? "text-gray-800 hover:bg-green-50 hover:text-green-700 cursor-pointer"
-                                : "text-gray-300 cursor-not-allowed",
-                        isToday && !isSelected
-                          ? "ring-2 ring-green-400 ring-offset-1"
-                          : "",
+                        "border-r border-b border-gray-100 min-h-18 p-1.5 flex flex-col transition-colors",
+                        available ? "cursor-pointer hover:bg-green-50/60" : "",
+                        isSelected ? "bg-green-50" : "",
                       ]
                         .filter(Boolean)
                         .join(" ")}
                     >
-                      {day}
-                      {isToday && !isSelected && (
-                        <span className="absolute bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-green-500" />
+                      {/* Day number */}
+                      <span
+                        className={[
+                          "w-7 h-7 flex items-center justify-center rounded-full text-sm font-medium select-none self-end",
+                          isToday ? "bg-green-600 text-white" : "",
+                          isSelected && !isToday
+                            ? "bg-green-100 text-green-700"
+                            : "",
+                          !isToday && !isSelected && available
+                            ? "text-gray-800"
+                            : "",
+                          !isToday &&
+                          !isSelected &&
+                          !available &&
+                          !isBlocked &&
+                          !event
+                            ? "text-gray-300"
+                            : "",
+                          isBlocked ? "text-red-300" : "",
+                          event && !isToday ? "text-gray-800" : "",
+                        ]
+                          .filter(Boolean)
+                          .join(" ")}
+                      >
+                        {day}
+                      </span>
+
+                      {/* Event block */}
+                      {event && (
+                        <div
+                          className={`mt-1 rounded-md px-1.5 py-1 text-[11px] font-medium leading-tight ${EVENT_PILL[event.status]}`}
+                        >
+                          <div className="flex items-center gap-1">
+                            <Clock size={9} className="shrink-0" />
+                            {String(
+                              new Date(
+                                new Date(event.scheduledAt).getTime() -
+                                  3 * 3600_000,
+                              ).getUTCHours(),
+                            ).padStart(2, "0")}
+                            :00
+                          </div>
+                          <div className="truncate">Consulta</div>
+                        </div>
                       )}
-                    </button>
+
+                      {/* Selected indicator */}
+                      {isSelected && !event && (
+                        <div className="mt-1 rounded-md px-1.5 py-1 text-[11px] font-medium bg-green-600 text-white leading-tight">
+                          Selecionado
+                        </div>
+                      )}
+                    </div>
                   );
                 },
               )}
             </div>
 
             {/* Legend */}
-            <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-gray-400 border-t border-gray-50 pt-4">
+            <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1.5 text-xs text-gray-400">
               <span className="flex items-center gap-1.5">
-                <span className="w-3 h-3 rounded-md bg-green-50 ring-2 ring-green-400 inline-block" />
+                <span className="w-5 h-3 rounded bg-green-600 inline-block" />{" "}
                 Hoje
               </span>
               <span className="flex items-center gap-1.5">
-                <span className="w-3 h-3 rounded-md bg-green-600 inline-block" />
+                <span className="w-5 h-3 rounded bg-yellow-100 inline-block" />{" "}
+                Aguardando
+              </span>
+              <span className="flex items-center gap-1.5">
+                <span className="w-5 h-3 rounded bg-green-100 inline-block" />{" "}
+                Confirmada
+              </span>
+              <span className="flex items-center gap-1.5">
+                <span className="w-5 h-3 rounded bg-green-50 border border-green-200 inline-block" />{" "}
                 Selecionado
-              </span>
-              <span className="flex items-center gap-1.5">
-                <span className="w-3 h-3 rounded-md bg-green-100 inline-block" />
-                Já agendado
-              </span>
-              <span className="flex items-center gap-1.5">
-                <span className="w-3 h-3 rounded-md bg-red-50 border border-red-200 inline-block" />
-                Bloqueado
               </span>
             </div>
           </div>
 
-          {/* ── SLOT PICKER ── hidden on mobile when no date selected */}
-          <div className={`p-5 ${!selectedDate ? "hidden md:block" : ""}`}>
-            {!selectedDate ? (
-              <div className="h-full flex flex-col items-center justify-center text-center text-gray-400 py-10 min-h-[300px]">
-                <CalendarDays
-                  size={40}
-                  className="mb-3 opacity-25 text-green-500"
-                />
-                <p className="text-sm font-medium text-gray-500">
-                  Nenhuma data selecionada
+          {/* ── Slot picker panel — appears below calendar when date selected ── */}
+          {bookingSuccess ? (
+            <div className="bg-white rounded-2xl border border-green-200 p-6 flex flex-col sm:flex-row items-center gap-5">
+              <div className="w-14 h-14 rounded-full bg-green-100 flex items-center justify-center shrink-0">
+                <svg
+                  className="w-7 h-7 text-green-600"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth={2.5}
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M5 13l4 4L19 7"
+                  />
+                </svg>
+              </div>
+              <div className="flex-1 text-center sm:text-left">
+                <p className="text-lg font-bold text-gray-900">
+                  Solicitação enviada!
                 </p>
-                <p className="text-xs mt-1 text-gray-400">
-                  Clique em um dia disponível no calendário ao lado
+                <p className="text-sm text-gray-500 mt-0.5">
+                  Aguarde a confirmação da nutricionista.
+                </p>
+                <p className="text-sm font-semibold text-green-700 mt-2 capitalize">
+                  {new Date(
+                    bookingSuccess.date + "T12:00:00Z",
+                  ).toLocaleDateString("pt-BR", {
+                    weekday: "long",
+                    day: "numeric",
+                    month: "long",
+                  })}{" "}
+                  às {String(bookingSuccess.hour).padStart(2, "0")}:00
                 </p>
               </div>
-            ) : (
-              <div className="flex flex-col h-full">
-                {/* Selected date header */}
-                <div className="flex items-center gap-2 mb-5">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setSelectedDate(null);
-                      setBookingHour(null);
-                    }}
-                    className="w-7 h-7 rounded-lg border border-gray-200 flex items-center justify-center hover:bg-gray-50 text-gray-400 shrink-0 transition"
-                  >
-                    <ChevronLeft size={14} />
-                  </button>
-                  <div>
-                    <p className="font-semibold text-gray-900 capitalize text-sm leading-tight">
-                      {new Date(selectedDate + "T12:00:00Z").toLocaleDateString(
-                        "pt-BR",
-                        {
-                          weekday: "long",
-                          day: "numeric",
-                          month: "long",
-                        },
-                      )}
-                    </p>
-                    <p className="text-xs text-gray-400 mt-0.5">
-                      Horário de Brasília (UTC-3)
-                    </p>
-                  </div>
+              <button
+                type="button"
+                onClick={() => setBookingSuccess(null)}
+                className="shrink-0 text-sm text-green-700 font-medium border border-green-200 rounded-xl px-4 py-2 hover:bg-green-50 transition"
+              >
+                Agendar outra
+              </button>
+            </div>
+          ) : selectedDate ? (
+            <div className="bg-white rounded-2xl border border-gray-200 p-5">
+              <div className="flex items-center gap-3 mb-5">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedDate(null);
+                    setBookingHour(null);
+                  }}
+                  className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 text-gray-400 hover:bg-gray-50 transition"
+                >
+                  <ChevronLeft size={15} />
+                </button>
+                <div>
+                  <p className="font-bold text-gray-900 capitalize text-base leading-tight">
+                    {new Date(selectedDate + "T12:00:00Z").toLocaleDateString(
+                      "pt-BR",
+                      {
+                        weekday: "long",
+                        day: "numeric",
+                        month: "long",
+                      },
+                    )}
+                  </p>
+                  <p className="text-xs text-gray-400 mt-0.5">
+                    Selecione um horário — Brasília (UTC-3)
+                  </p>
                 </div>
+              </div>
 
-                {slotsLoading ? (
-                  <div className="grid grid-cols-3 gap-2">
-                    {Array.from({ length: 6 }).map((_, i) => (
-                      <div
-                        key={i}
-                        className="h-11 rounded-xl bg-gray-100 animate-pulse"
-                      />
-                    ))}
-                  </div>
-                ) : slots.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center text-center py-10 text-gray-400">
-                    <Clock size={28} className="mb-2 opacity-30" />
-                    <p className="text-sm font-medium">
-                      Sem horários disponíveis
-                    </p>
-                    <p className="text-xs mt-1">Tente selecionar outra data</p>
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-3 gap-2">
-                    {slots.map((h) => (
-                      <button
-                        key={h}
-                        type="button"
-                        onClick={() =>
-                          setBookingHour(bookingHour === h ? null : h)
-                        }
-                        className={[
-                          "h-11 rounded-xl text-sm font-medium border transition-all flex items-center justify-center gap-1",
-                          bookingHour === h
-                            ? "bg-green-600 text-white border-green-600 shadow-sm"
-                            : "border-gray-200 text-gray-700 hover:border-green-400 hover:bg-green-50 hover:text-green-700",
-                        ].join(" ")}
-                      >
-                        <Clock size={12} className="-mt-px shrink-0" />
-                        {String(h).padStart(2, "0")}:00
-                      </button>
-                    ))}
-                  </div>
-                )}
+              {slotsLoading ? (
+                <div className="flex gap-2 flex-wrap">
+                  {Array.from({ length: 6 }).map((_, i) => (
+                    <div
+                      key={i}
+                      className="h-10 w-24 rounded-xl bg-gray-100 animate-pulse"
+                    />
+                  ))}
+                </div>
+              ) : slots.length === 0 ? (
+                <div className="flex items-center gap-2 text-gray-400 py-4">
+                  <Clock size={18} className="opacity-40" />
+                  <p className="text-sm">
+                    Sem horários disponíveis. Tente outra data.
+                  </p>
+                </div>
+              ) : (
+                <div className="flex flex-wrap gap-2">
+                  {slots.map((h) => (
+                    <button
+                      key={h}
+                      type="button"
+                      onClick={() =>
+                        setBookingHour(bookingHour === h ? null : h)
+                      }
+                      className={[
+                        "h-10 px-4 rounded-xl text-sm font-semibold border transition-all flex items-center gap-1.5",
+                        bookingHour === h
+                          ? "bg-green-600 text-white border-green-600 shadow-sm"
+                          : "border-gray-200 text-gray-700 hover:border-green-400 hover:bg-green-50 hover:text-green-700",
+                      ].join(" ")}
+                    >
+                      <Clock size={12} className="shrink-0" />
+                      {String(h).padStart(2, "0")}:00
+                    </button>
+                  ))}
+                </div>
+              )}
 
-                {/* Summary card */}
-                {bookingHour !== null && (
-                  <div className="mt-4 bg-green-50 border border-green-100 rounded-xl p-4">
-                    <p className="text-xs text-green-700 font-semibold mb-1 uppercase tracking-wide">
+              {bookingHour !== null && (
+                <div className="mt-5 flex flex-col sm:flex-row items-start sm:items-center gap-4">
+                  <div className="flex-1 bg-green-50 border border-green-100 rounded-xl px-4 py-3">
+                    <p className="text-xs text-green-700 font-semibold uppercase tracking-wide">
                       Resumo
                     </p>
-                    <p className="text-sm font-bold text-gray-900">
+                    <p className="text-sm font-bold text-gray-900 mt-0.5 capitalize">
                       {new Date(selectedDate + "T12:00:00Z").toLocaleDateString(
                         "pt-BR",
                         {
@@ -606,141 +773,28 @@ export default function ConsultasPage() {
                       )}{" "}
                       às {String(bookingHour).padStart(2, "0")}:00
                     </p>
-                    <p className="text-xs text-gray-500 mt-0.5">
-                      Consulta com a nutricionista · Online
+                    <p className="text-xs text-gray-400 mt-0.5">
+                      Consulta nutricional · Online
                     </p>
                   </div>
-                )}
-
-                {bookError && (
-                  <p className="text-sm text-red-600 mt-3">{bookError}</p>
-                )}
-
-                <button
-                  type="button"
-                  onClick={handleBook}
-                  disabled={bookingHour === null || booking}
-                  className="mt-4 w-full bg-green-600 text-white py-3 rounded-xl font-semibold text-sm hover:bg-green-700 disabled:opacity-40 disabled:cursor-not-allowed transition shadow-sm"
-                >
-                  {booking ? "Agendando..." : "Solicitar agendamento"}
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* UPCOMING */}
-      {upcoming.length > 0 && (
-        <div>
-          <h2 className="text-lg font-semibold text-gray-900 mb-3">
-            Próximas consultas
-          </h2>
-          <div className="space-y-3">
-            {upcoming.map((c) => (
-              <div
-                key={c.id}
-                className="bg-white rounded-xl border border-gray-200 p-4 flex items-start justify-between gap-4"
-              >
-                <div className="space-y-1.5 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <CalendarDays
-                      size={15}
-                      className="text-green-600 shrink-0"
-                    />
-                    <span className="text-sm font-medium text-gray-900">
-                      {formatBrazilDate(c.scheduledAt)}
-                    </span>
-                    <span
-                      className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_COLOR[c.status]}`}
-                    >
-                      {STATUS_LABEL[c.status]}
-                    </span>
-                  </div>
-                  {c.meetingLink && (
-                    <a
-                      href={c.meetingLink}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-1.5 text-sm text-green-700 hover:underline"
-                    >
-                      <Video size={13} /> Entrar na reunião
-                    </a>
-                  )}
-                  {c.notes && (
-                    <p className="text-xs text-gray-500">{c.notes}</p>
-                  )}
-                </div>
-                {new Date(c.scheduledAt).getTime() - Date.now() >
-                publicConfig.cancelDays * 86_400_000 ? (
                   <button
                     type="button"
-                    onClick={() => setCancelConfirm(c.id)}
-                    disabled={cancelling && cancelConfirm === c.id}
-                    className="text-red-400 hover:text-red-600 text-xs shrink-0 flex items-center gap-1 disabled:opacity-50 transition"
+                    onClick={handleBook}
+                    disabled={booking}
+                    className="shrink-0 bg-green-600 text-white px-6 py-3 rounded-xl font-semibold text-sm hover:bg-green-700 disabled:opacity-40 transition shadow-sm"
                   >
-                    <X size={14} /> Cancelar
+                    {booking ? "Agendando..." : "Confirmar"}
                   </button>
-                ) : (
-                  <span className="text-xs text-gray-400 shrink-0 text-right leading-relaxed">
-                    Cancelamento
-                    <br />
-                    indisponível
-                    <br />
-                    (&lt;{publicConfig.cancelDays}d)
-                  </span>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* PAST */}
-      {!loading && past.length > 0 && (
-        <div>
-          <h2 className="text-lg font-semibold text-gray-900 mb-3">
-            Histórico
-          </h2>
-          <div className="space-y-2">
-            {past.map((c) => (
-              <div
-                key={c.id}
-                className="bg-white rounded-xl border border-gray-100 p-4 flex items-start justify-between gap-4 opacity-80"
-              >
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <CalendarDays
-                      size={14}
-                      className="text-gray-400 shrink-0"
-                    />
-                    <span className="text-sm text-gray-700">
-                      {formatBrazilDate(c.scheduledAt)}
-                    </span>
-                    <span
-                      className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_COLOR[c.status]}`}
-                    >
-                      {STATUS_LABEL[c.status]}
-                    </span>
-                  </div>
-                  {c.cancelReason && (
-                    <p className="text-xs text-gray-400">{c.cancelReason}</p>
-                  )}
                 </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
+              )}
 
-      {!loading && consultations.length === 0 && upcoming.length === 0 && (
-        <div className="text-center py-12 text-gray-400">
-          <CalendarDays size={40} className="mx-auto mb-3 opacity-30" />
-          <p className="text-sm">
-            Você ainda não tem nenhuma consulta agendada
-          </p>
+              {bookError && (
+                <p className="text-sm text-red-600 mt-3">{bookError}</p>
+              )}
+            </div>
+          ) : null}
         </div>
-      )}
+      </div>
     </div>
   );
 }

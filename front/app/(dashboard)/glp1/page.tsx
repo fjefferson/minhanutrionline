@@ -16,6 +16,10 @@ import {
   UserCircle,
   Sparkles,
   Zap,
+  Check,
+  TrendingDown,
+  TrendingUp,
+  Minus,
 } from "lucide-react";
 
 interface Symptom {
@@ -39,7 +43,7 @@ function FreeLimitModal() {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden">
-        <div className="bg-gradient-to-br from-green-600 to-emerald-700 p-7 text-center">
+        <div className="bg-linear-to-br from-green-600 to-emerald-700 p-7 text-center">
           <div className="w-14 h-14 rounded-full bg-white/20 flex items-center justify-center mx-auto mb-3">
             <Sparkles className="w-7 h-7 text-white" />
           </div>
@@ -262,7 +266,7 @@ export default function Glp1Page() {
             <ArrowLeft className="w-5 h-5" />
           </button>
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Nova consulta</h1>
+            <h1 className="text-2xl font-bold text-gray-900">Nova orientação</h1>
             <p className="text-sm text-gray-500 mt-0.5">
               Selecione os sintomas que está sentindo
             </p>
@@ -270,18 +274,39 @@ export default function Glp1Page() {
         </div>
 
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8">
+          {history.length > 0 && (
+            <div className="mb-5 bg-amber-50 border border-amber-100 rounded-xl px-4 py-3">
+              <p className="text-xs font-semibold text-amber-700 mb-1.5">
+                Última orientação
+              </p>
+              <div className="flex flex-wrap gap-1.5">
+                {history[0].symptoms.map((s) => (
+                  <span
+                    key={s.symptom.slug}
+                    className="text-xs bg-white border border-amber-200 text-amber-700 px-2.5 py-0.5 rounded-full"
+                  >
+                    {s.symptom.name}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-7">
             {symptoms.map((s) => (
               <button
                 key={s.slug}
                 onClick={() => toggle(s.slug)}
-                className={`px-4 py-3 rounded-xl text-sm font-medium border transition text-left ${
+                className={`px-4 py-3 rounded-xl text-sm font-medium border transition text-left flex items-center justify-between gap-2 active:scale-[0.97] ${
                   selected.includes(s.slug)
-                    ? "bg-green-600 text-white border-green-600"
-                    : "bg-white text-gray-700 border-gray-200 hover:border-green-300"
+                    ? "bg-green-600 text-white border-green-600 shadow-sm"
+                    : "bg-white text-gray-700 border-gray-200 hover:border-green-300 hover:bg-green-50"
                 }`}
               >
-                {s.name}
+                <span>{s.name}</span>
+                {selected.includes(s.slug) && (
+                  <Check className="w-4 h-4 shrink-0" />
+                )}
               </button>
             ))}
           </div>
@@ -307,15 +332,28 @@ export default function Glp1Page() {
           <button
             onClick={handleSubmit}
             disabled={submitting || selected.length === 0}
-            className="w-full bg-green-600 text-white py-3 rounded-xl font-semibold hover:bg-green-700 transition disabled:opacity-50"
+            className="w-full bg-green-600 text-white py-3 rounded-xl font-semibold hover:bg-green-700 transition disabled:opacity-50 flex items-center justify-center gap-2"
           >
-            {submitting ? "Analisando sintomas..." : "Receber orientações"}
+            {submitting ? (
+              <>
+                <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                Analisando com IA...
+              </>
+            ) : (
+              "Receber orientações"
+            )}
           </button>
 
-          {selected.length > 0 && (
+          {selected.length > 0 && !submitting && (
             <p className="text-center text-xs text-gray-400 mt-3">
               {selected.length} sintoma{selected.length > 1 ? "s" : ""}{" "}
               selecionado{selected.length > 1 ? "s" : ""}
+            </p>
+          )}
+
+          {submitting && (
+            <p className="text-center text-xs text-gray-400 mt-3 animate-pulse">
+              Isso pode levar alguns segundos...
             </p>
           )}
         </div>
@@ -345,6 +383,74 @@ export default function Glp1Page() {
         </div>
 
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 mb-5">
+          {/* Evolução vs. orientação anterior */}
+          {(() => {
+            const prevReport = history.find((r) => r.id !== result.id);
+            if (!prevReport) return null;
+            const prevSlugs = new Set(
+              prevReport.symptoms.map((s) => s.symptom.slug),
+            );
+            const currSlugs = new Set(selected);
+            const improved = [...prevSlugs].filter((s) => !currSlugs.has(s));
+            const newSyms = [...currSlugs].filter((s) => !prevSlugs.has(s));
+            if (improved.length === 0 && newSyms.length === 0) return null;
+            return (
+              <div className="mb-5 rounded-xl border border-gray-100 bg-gray-50 p-4">
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">
+                  Evolução vs. orientação anterior
+                </p>
+                {improved.length > 0 && (
+                  <div className="flex items-start gap-2 mb-2">
+                    <TrendingDown className="w-4 h-4 text-green-600 shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-xs font-semibold text-green-700">
+                        Melhorou
+                      </p>
+                      <div className="flex flex-wrap gap-1.5 mt-1">
+                        {improved.map((slug) => {
+                          const sym = prevReport.symptoms.find(
+                            (s) => s.symptom.slug === slug,
+                          );
+                          return (
+                            <span
+                              key={slug}
+                              className="text-xs bg-green-100 text-green-700 px-2.5 py-0.5 rounded-full font-medium"
+                            >
+                              {sym?.symptom.name ?? slug}
+                            </span>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                )}
+                {newSyms.length > 0 && (
+                  <div className="flex items-start gap-2">
+                    <TrendingUp className="w-4 h-4 text-orange-500 shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-xs font-semibold text-orange-600">
+                        Novo sintoma
+                      </p>
+                      <div className="flex flex-wrap gap-1.5 mt-1">
+                        {newSyms.map((slug) => {
+                          const sym = symptoms.find((s) => s.slug === slug);
+                          return (
+                            <span
+                              key={slug}
+                              className="text-xs bg-orange-100 text-orange-700 px-2.5 py-0.5 rounded-full font-medium"
+                            >
+                              {sym?.name ?? slug}
+                            </span>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })()}
+
           <div className="flex flex-wrap gap-2 mb-6">
             {selected.map((s) => {
               const sym = symptoms.find((x) => x.slug === s);
@@ -478,7 +584,7 @@ export default function Glp1Page() {
 
       {/* Contador de créditos gratuitos */}
       {freeStatusChecked && !hasActivePlan && !freeLimitReached && (
-        <div className="mb-6 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-100 rounded-2xl px-5 py-4 flex items-center gap-4">
+        <div className="mb-6 bg-linear-to-r from-green-50 to-emerald-50 border border-green-100 rounded-2xl px-5 py-4 flex items-center gap-4">
           <div className="w-10 h-10 bg-green-600 rounded-xl flex items-center justify-center shrink-0">
             <Zap className="w-5 h-5 text-white" />
           </div>
@@ -511,7 +617,7 @@ export default function Glp1Page() {
 
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Consultas GLP-1</h1>
+          <h1 className="text-2xl font-bold text-gray-900">Orientações GLP-1</h1>
           <p className="text-gray-500 mt-1 text-sm">
             Orientações nutricionais personalizadas para os seus sintomas
           </p>
@@ -521,7 +627,7 @@ export default function Glp1Page() {
           className="flex items-center gap-2 bg-green-600 text-white px-4 py-2.5 rounded-xl text-sm font-semibold hover:bg-green-700 transition shrink-0"
         >
           <Plus className="w-4 h-4" />
-          Nova consulta
+          Nova orientação
         </button>
       </div>
 
@@ -532,14 +638,14 @@ export default function Glp1Page() {
       ) : history.length === 0 ? (
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-12 text-center">
           <p className="text-gray-400 text-sm mb-4">
-            Você ainda não tem nenhuma consulta.
+            Você ainda não tem nenhuma orientação.
           </p>
           <button
             onClick={openForm}
             className="inline-flex items-center gap-2 bg-green-600 text-white px-5 py-2.5 rounded-xl text-sm font-semibold hover:bg-green-700 transition"
           >
             <Plus className="w-4 h-4" />
-            Fazer primeira consulta
+            Fazer primeira orientação
           </button>
         </div>
       ) : (
@@ -552,9 +658,35 @@ export default function Glp1Page() {
             >
               <div className="flex items-start justify-between gap-4">
                 <div className="flex-1 min-w-0">
-                  <p className="text-xs text-gray-400 mb-2">
-                    {new Date(r.createdAt).toLocaleString("pt-BR")}
-                  </p>
+                  <div className="flex items-center gap-2 mb-2">
+                    <p className="text-xs text-gray-400">
+                      {new Date(r.createdAt).toLocaleString("pt-BR")}
+                    </p>
+                    {(() => {
+                      const idx = history.indexOf(r);
+                      const prev = history[idx + 1];
+                      if (!prev) return null;
+                      const curr = r.symptoms.length;
+                      const last = prev.symptoms.length;
+                      if (curr < last)
+                        return (
+                          <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-green-700 bg-green-50 px-2 py-0.5 rounded-full">
+                            <TrendingDown className="w-3 h-3" /> Melhora
+                          </span>
+                        );
+                      if (curr > last)
+                        return (
+                          <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-orange-600 bg-orange-50 px-2 py-0.5 rounded-full">
+                            <TrendingUp className="w-3 h-3" /> Piora
+                          </span>
+                        );
+                      return (
+                        <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">
+                          <Minus className="w-3 h-3" /> Estável
+                        </span>
+                      );
+                    })()}
+                  </div>
                   <div className="flex flex-wrap gap-1.5 mb-2">
                     {r.symptoms.map((s) => (
                       <span

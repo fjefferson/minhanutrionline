@@ -30,11 +30,18 @@ export interface PatientProfile {
   occupation?: string | null;
 }
 
+export interface SymptomHistoryEntry {
+  date: Date;
+  symptoms: string[];
+}
+
 export interface RagInput {
   symptoms: string[];
   extraNotes: string;
   knowledgeContext: string;
   profile?: PatientProfile | null;
+  symptomHistory?: SymptomHistoryEntry[];
+  patientName?: string;
 }
 
 const GENDER_LABEL: Record<Gender, string> = {
@@ -112,7 +119,14 @@ function buildProfileContext(profile: PatientProfile): string {
 export async function generateNutritionalGuidance(
   input: RagInput,
 ): Promise<string> {
-  const { symptoms, extraNotes, knowledgeContext, profile } = input;
+  const {
+    symptoms,
+    extraNotes,
+    knowledgeContext,
+    profile,
+    symptomHistory,
+    patientName,
+  } = input;
 
   const profileContext = profile ? buildProfileContext(profile) : null;
 
@@ -120,18 +134,32 @@ export async function generateNutritionalGuidance(
 Seu papel é fornecer orientações nutricionais personalizadas, empáticas e baseadas em evidências para os sintomas relatados pelo paciente.
 Use a base de conhecimento fornecida como referência principal. Seja objetiva, prática e humanizada.
 Nunca substitua o acompanhamento médico — sempre incentive o paciente a manter contato com seu médico prescritor.
-Responda sempre em português do Brasil.`;
+Responda sempre em português do Brasil.${patientName ? `\nSempre chame o paciente pelo primeiro nome ("${patientName.split(" ")[0]}") ao longo da resposta — no início e quando fizer sentido no contexto.` : ""}`;
 
-  const userPrompt = `${profileContext ? `Perfil do paciente:\n${profileContext}\n\n` : ""}O paciente relatou os seguintes sintomas após uso de GLP-1:
+  const historyContext =
+    symptomHistory && symptomHistory.length > 0
+      ? `\nHistórico de consultas anteriores do paciente (da mais recente à mais antiga):\n${symptomHistory
+          .map(
+            (h) =>
+              `- ${new Date(h.date).toLocaleDateString("pt-BR")}: ${
+                h.symptoms.length > 0 ? h.symptoms.join(", ") : "nenhum sintoma"
+              }`,
+          )
+          .join(
+            "\n",
+          )}\n\nConsulta atual: ${symptoms.length > 0 ? symptoms.join(", ") : "nenhum sintoma específico marcado"}\n\nIMPORTANTE: Compare a consulta atual com o histórico. Se houver sintomas que sumiram, mencione que houve melhora. Se houver sintomas novos, destaque. Se os sintomas persistirem, reforce a orientação. Seja específico sobre a evolução observada.`
+      : "";
+
+  const userPrompt = `${patientName ? `Nome do paciente: ${patientName}\n\n` : ""}${profileContext ? `Perfil do paciente:\n${profileContext}\n\n` : ""}O paciente relatou os seguintes sintomas após uso de GLP-1:
 Sintomas: ${symptoms.length > 0 ? symptoms.join(", ") : "nenhum sintoma específico marcado"}
 ${extraNotes ? `Observações adicionais: ${extraNotes}` : ""}
-
+${historyContext}
 Base de conhecimento nutricional relevante:
 ---
 ${knowledgeContext || "Nenhum conteúdo específico encontrado para estes sintomas."}
 ---
 
-Com base nesses sintomas${profileContext ? ", no perfil do paciente" : ""} e na base de conhecimento acima, forneça orientações nutricionais práticas e personalizadas para este paciente.`;
+Com base nesses sintomas${profileContext ? ", no perfil do paciente" : ""}${symptomHistory && symptomHistory.length > 0 ? ", no histórico de consultas" : ""} e na base de conhecimento acima, forneça orientações nutricionais práticas e personalizadas para este paciente.`;
 
   const response = await client.chat.completions.create({
     model: MODEL,

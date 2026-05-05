@@ -129,12 +129,29 @@ export async function createReport(req: AuthenticatedRequest, res: Response) {
     where: { userId },
   });
 
+  // Busca histórico de consultas anteriores para contexto evolutivo da IA
+  const previousReports = await prisma.symptomReport.findMany({
+    where: { userId, productId: product.id },
+    include: {
+      symptoms: { include: { symptom: { select: { name: true } } } },
+    },
+    orderBy: { createdAt: "desc" },
+    take: 5,
+  });
+
+  const symptomHistory = previousReports.map((r) => ({
+    date: r.createdAt,
+    symptoms: r.symptoms.map((s) => s.symptom.name),
+  }));
+
   // Gera resposta da IA
   const aiResponse = await generateNutritionalGuidance({
     symptoms: symptoms.map((s) => s.name),
     extraNotes: extraNotes ?? "",
     knowledgeContext,
     profile,
+    symptomHistory,
+    patientName: user?.name ?? undefined,
   });
 
   // Salva no banco
