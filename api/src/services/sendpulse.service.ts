@@ -3,6 +3,12 @@ import axios from "axios";
 const SENDPULSE_API_URL = "https://api.sendpulse.com";
 const CLIENT_ID = process.env.SENDPULSE_API_ID ?? "";
 const CLIENT_SECRET = process.env.SENDPULSE_API_SECRET ?? "";
+
+if (!CLIENT_ID || !CLIENT_SECRET) {
+  console.error(
+    "[SendPulse] ATENÇÃO: SENDPULSE_API_ID ou SENDPULSE_API_SECRET não configurados. E-mails não serão enviados.",
+  );
+}
 const FROM_EMAIL = "nutri@elaneoliveira.com.br";
 const FROM_NAME = "Elane Oliveira · MinhaNutri Online";
 

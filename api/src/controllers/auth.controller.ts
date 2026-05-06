@@ -54,11 +54,15 @@ export const register = async (req: Request, res: Response): Promise<void> => {
   );
 
   const verifyLink = `${FRONTEND_URL}/confirmar-email?token=${verifyToken}`;
-  // Fire-and-forget — não bloqueia o registro
-  sendVerificationEmail(
+  await sendVerificationEmail(
     { name: user.name, email: user.email },
     verifyLink,
-  ).catch(() => {});
+  ).catch((err) =>
+    console.error(
+      "[auth] Falha ao enviar e-mail de verificação:",
+      err?.message ?? err,
+    ),
+  );
 
   res.status(201).json({ user, token });
 };
@@ -297,10 +301,15 @@ export const resendVerification = async (
   });
 
   const verifyLink = `${FRONTEND_URL}/confirmar-email?token=${verifyToken}`;
-  sendVerificationEmail(
+  await sendVerificationEmail(
     { name: user.name, email: user.email },
     verifyLink,
-  ).catch(() => {});
+  ).catch((err) =>
+    console.error(
+      "[auth] Falha ao reenviar e-mail de verificação:",
+      err?.message ?? err,
+    ),
+  );
 
   res.json({
     message:
