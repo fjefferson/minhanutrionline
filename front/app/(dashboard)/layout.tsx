@@ -8,7 +8,7 @@ import TopBar from "@/components/layout/TopBar";
 import OnboardingModal from "@/components/OnboardingModal";
 import api from "@/lib/api";
 import Link from "next/link";
-import { Mail, RefreshCw } from "lucide-react";
+import { Mail, RefreshCw, AlertTriangle } from "lucide-react";
 
 export default function DashboardLayout({
   children,
@@ -43,6 +43,12 @@ export default function DashboardLayout({
   // Usuário autenticado mas e-mail não confirmado → bloquear com overlay
   const emailNotVerified =
     user?.role === "USER" && user?.emailVerified === false;
+
+  // Assinatura vencida ou inadimplente
+  const subStatus = user?.subscription?.status;
+  const isPastDue = subStatus === "PAST_DUE";
+  const isCanceled =
+    subStatus === "CANCELED" && !user?.subscription?.cancelScheduledAt;
 
   const handleResend = async () => {
     if (!user?.email || resending) return;
@@ -95,6 +101,31 @@ export default function DashboardLayout({
                 Sair
               </Link>
             </div>
+          </div>
+        )}
+
+        {(isPastDue || isCanceled) && (
+          <div className="bg-red-50 border-b border-red-200 px-4 sm:px-6 py-3 flex flex-col sm:flex-row items-start sm:items-center gap-3">
+            <AlertTriangle className="w-4 h-4 text-red-600 shrink-0 mt-0.5 sm:mt-0" />
+            <p className="text-sm text-red-800 flex-1">
+              {isPastDue ? (
+                <>
+                  <strong>Pagamento pendente.</strong> Sua assinatura está
+                  inadimplente. Regularize para manter seu acesso.
+                </>
+              ) : (
+                <>
+                  <strong>Assinatura encerrada.</strong> Reative seu plano para
+                  continuar usando a plataforma.
+                </>
+              )}
+            </p>
+            <Link
+              href="/planos"
+              className="shrink-0 text-xs bg-red-600 text-white px-3 py-1.5 rounded-lg font-semibold hover:bg-red-700 transition"
+            >
+              {isPastDue ? "Regularizar" : "Reativar plano"}
+            </Link>
           </div>
         )}
 

@@ -1,10 +1,12 @@
 import axios from "axios";
 
+const IS_DEV = (process.env.NODE_ENV ?? "development") === "development";
+
 const SENDPULSE_API_URL = "https://api.sendpulse.com";
 const CLIENT_ID = process.env.SENDPULSE_API_ID ?? "";
 const CLIENT_SECRET = process.env.SENDPULSE_API_SECRET ?? "";
 
-if (!CLIENT_ID || !CLIENT_SECRET) {
+if (!IS_DEV && (!CLIENT_ID || !CLIENT_SECRET)) {
   console.error(
     "[SendPulse] ATENÇÃO: SENDPULSE_API_ID ou SENDPULSE_API_SECRET não configurados. E-mails não serão enviados.",
   );
@@ -48,6 +50,10 @@ async function getAccessToken(): Promise<string> {
 }
 
 export async function sendWelcomeEmail(to: { name: string; email: string }) {
+  if (IS_DEV) {
+    console.log(`[SendPulse][DEV] sendWelcomeEmail → ${to.email}`);
+    return;
+  }
   try {
     const token = await getAccessToken();
 
@@ -236,6 +242,10 @@ export async function sendChatReplyNotification(to: {
   name: string;
   email: string;
 }) {
+  if (IS_DEV) {
+    console.log(`[SendPulse][DEV] sendChatReplyNotification → ${to.email}`);
+    return;
+  }
   try {
     const token = await getAccessToken();
     const firstName = to.name.split(" ")[0];
@@ -287,6 +297,12 @@ export async function sendChatReplyNotification(to: {
 export async function sendChatPatientMessageNotification(patient: {
   name: string;
 }) {
+  if (IS_DEV) {
+    console.log(
+      `[SendPulse][DEV] sendChatPatientMessageNotification → ${patient.name}`,
+    );
+    return;
+  }
   const NUTRI_EMAIL = process.env.SENDPULSE_SENDER_EMAIL ?? FROM_EMAIL;
   const NUTRI_NAME = "Elane Oliveira";
   try {
@@ -339,6 +355,12 @@ export async function sendPasswordResetEmail(
   to: { name: string; email: string },
   resetLink: string,
 ) {
+  if (IS_DEV) {
+    console.log(
+      `[SendPulse][DEV] sendPasswordResetEmail → ${to.email} | link: ${resetLink}`,
+    );
+    return;
+  }
   try {
     const token = await getAccessToken();
     const html = buildResetHtml(to.name, resetLink);
@@ -505,6 +527,12 @@ export async function sendConsultationConfirmedEmail(
   scheduledAt: Date,
   meetingLink?: string | null,
 ) {
+  if (IS_DEV) {
+    console.log(
+      `[SendPulse][DEV] sendConsultationConfirmedEmail → ${to.email}`,
+    );
+    return;
+  }
   try {
     const token = await getAccessToken();
     const html = buildConsultationConfirmedHtml(
@@ -634,6 +662,12 @@ export async function sendVerificationEmail(
   to: { name: string; email: string },
   verifyLink: string,
 ) {
+  if (IS_DEV) {
+    console.log(
+      `[SendPulse][DEV] sendVerificationEmail → ${to.email} | link: ${verifyLink}`,
+    );
+    return;
+  }
   try {
     const token = await getAccessToken();
     const firstName = to.name.split(" ")[0];
@@ -770,6 +804,10 @@ export async function sendContactEmail(data: {
   subject: string;
   message: string;
 }) {
+  if (IS_DEV) {
+    console.log(`[SendPulse][DEV] sendContactEmail → de: ${data.email}`);
+    return;
+  }
   const NUTRI_EMAIL = process.env.SENDPULSE_SENDER_EMAIL ?? FROM_EMAIL;
   try {
     const token = await getAccessToken();

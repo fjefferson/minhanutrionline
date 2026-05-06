@@ -27,7 +27,7 @@ export default function CheckoutSuccessPage() {
           Pagamento recebido!
         </h1>
         <p className="text-gray-500 mb-2">
-          Sua assinatura está sendo processada pelo Mercado Pago.
+          Sua assinatura está sendo processada com segurança.
         </p>
         <p className="text-gray-400 text-sm mb-8">
           Em alguns instantes seu acesso será liberado automaticamente.

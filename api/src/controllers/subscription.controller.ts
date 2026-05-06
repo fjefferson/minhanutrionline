@@ -8,6 +8,7 @@ import {
 } from "../services/asaas.service";
 import { AuthenticatedRequest } from "../middlewares/auth.middleware";
 import { sendWelcomeEmail } from "../services/sendpulse.service";
+import { ASAAS_WEBHOOK_TOKEN } from "../config/env";
 
 // POST /subscriptions/checkout
 export async function checkout(req: Request, res: Response) {
@@ -314,6 +315,15 @@ export async function cancelSubscription(req: Request, res: Response) {
 
 // POST /webhooks/asaas (public)
 export async function asaasWebhook(req: Request, res: Response) {
+  // Valida token de segurança configurado na plataforma Asaas
+  if (ASAAS_WEBHOOK_TOKEN) {
+    const incomingToken = req.headers["asaas-access-token"];
+    if (incomingToken !== ASAAS_WEBHOOK_TOKEN) {
+      res.sendStatus(401);
+      return;
+    }
+  }
+
   const body = req.body as {
     event: string;
     payment?: { subscription?: string; status?: string };

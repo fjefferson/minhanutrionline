@@ -33,7 +33,7 @@ export async function createAsaasSubscription(
 
   const sub = await api.post("/subscriptions", {
     customer: input.customerId,
-    billingType: "CREDIT_CARD",
+    billingType: "UNDEFINED",
     value: input.amountBRL,
     nextDueDate,
     cycle: "MONTHLY",
