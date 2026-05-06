@@ -1,6 +1,5 @@
 import { Router } from "express";
 import { authenticate } from "../middlewares/auth.middleware";
-import { requirePlan } from "../middlewares/plan.middleware";
 import {
   getSymptoms,
   createReport,
@@ -19,6 +18,6 @@ router.get("/symptoms", getSymptoms);
 router.post("/report", createReport);
 router.get("/reports", getReports);
 router.patch("/report/:id/helpful", rateReport);
-router.post("/report/:id/review", requirePlan("BASIC"), requestReview);
+router.post("/report/:id/review", requestReview);
 
 export default router;
