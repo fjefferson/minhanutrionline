@@ -63,7 +63,7 @@ export default function PlanosPage() {
             Escolha seu plano
           </h1>
           <p className="text-gray-500 text-lg">
-            Suporte especializado para a sua jornada com GLP-1
+            Suporte dedicado para a sua jornada com GLP-1
           </p>
         </div>
 

@@ -20,14 +20,14 @@ import FaqSection from "@/components/home/FaqSection";
 export const metadata: Metadata = {
   title: "Acompanhamento Nutricional GLP-1 | MinhaNutri Online",
   description:
-    "Nutricionista especialista em GLP-1. Controle sintomas, plano alimentar e consultas online para quem usa Ozempic, Wegovy ou Mounjaro.",
+    "Nutricionista com foco em GLP-1. Controle sintomas, plano alimentar e consultas online para quem usa Ozempic, Wegovy ou Mounjaro.",
   alternates: {
     canonical: "https://minhanutrionline.com.br",
   },
   openGraph: {
     title: "Acompanhamento Nutricional GLP-1 | MinhaNutri Online",
     description:
-      "Nutricionista especialista em GLP-1. Controle sintomas, plano alimentar personalizado e consultas online para Ozempic, Wegovy e Mounjaro.",
+      "Nutricionista com foco em GLP-1. Controle sintomas, plano alimentar personalizado e consultas online para Ozempic, Wegovy e Mounjaro.",
     url: "https://minhanutrionline.com.br",
     images: [
       {
@@ -55,7 +55,7 @@ const jsonLd = [
       url: "https://minhanutrionline.com.br/images/avatar_atendimento_elane_oliveira_nutri.jpg",
     },
     description:
-      "Plataforma de acompanhamento nutricional especializada em tratamentos GLP-1. Suporte para pacientes que usam Ozempic, Wegovy e Mounjaro.",
+      "Plataforma de acompanhamento nutricional com foco em tratamentos GLP-1. Suporte para pacientes que usam Ozempic, Wegovy e Mounjaro.",
     founder: {
       "@type": "Person",
       name: "Elane Oliveira",
@@ -78,7 +78,7 @@ const jsonLd = [
     name: "MinhaNutri Online",
     url: "https://minhanutrionline.com.br",
     description:
-      "Acompanhamento nutricional especializado em GLP-1, incluindo Ozempic (semaglutida), Wegovy e Mounjaro (tirzepatida). Controle de sintomas, plano alimentar e emagrecimento sustentável.",
+      "Acompanhamento nutricional com foco em GLP-1, incluindo Ozempic (semaglutida), Wegovy e Mounjaro (tirzepatida). Controle de sintomas, plano alimentar e emagrecimento sustentável.",
     medicalSpecialty: "Nutrição",
     employee: {
       "@type": "Person",
@@ -199,7 +199,7 @@ export default function HomePage() {
             <div className="flex-1 text-center lg:text-left">
               <span className="inline-flex items-center gap-2 bg-white border border-green-100 text-green-700 text-xs font-semibold px-4 py-2 rounded-full mb-6 shadow-sm">
                 <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" />
-                Especialistas em GLP-1 / Canetas Emagrecedoras
+                Com foco em GLP-1 / Canetas Emagrecedoras
               </span>
 
               <h1 className="text-4xl sm:text-5xl lg:text-[3.5rem] font-bold text-gray-900 leading-[1.1] tracking-tight mb-6">
@@ -222,7 +222,7 @@ export default function HomePage() {
                     />
                   </svg>
                 </span>{" "}
-                especializado
+                dedicado
               </h1>
 
               <p className="text-base sm:text-lg text-gray-500 leading-relaxed mb-8 max-w-lg mx-auto lg:mx-0">
@@ -280,7 +280,7 @@ export default function HomePage() {
               <div className="relative h-[400px] sm:h-[500px] rounded-3xl overflow-hidden shadow-2xl shadow-green-100">
                 <Image
                   src="/images/hero_images/file_00000000b36c720eae05e581ccec3bef.png"
-                  alt="Elane Oliveira — Nutricionista especialista em GLP-1"
+                  alt="Elane Oliveira — Nutricionista CRN-14533"
                   fill
                   className="object-cover object-center"
                   sizes="(max-width: 1024px) 100vw, 480px"
@@ -491,7 +491,7 @@ export default function HomePage() {
               <p className="text-gray-500 mb-8 leading-relaxed text-sm sm:text-base">
                 A plataforma foi desenhada para ser simples e eficiente. Em
                 poucos minutos você já tem acesso ao suporte nutricional
-                especializado.
+                dedicado.
               </p>
 
               <div className="space-y-5">
@@ -576,7 +576,7 @@ export default function HomePage() {
                   {[
                     "Graduada em Nutrição (2020)",
                     "CRN-14533 — Registro ativo",
-                    "Especialista em recomposição corporal",
+                    "Foco em recomposição corporal",
                     "Formação em Saúde da Mulher",
                     "Expertise em tratamentos GLP-1",
                     "Atendimento 100% online",
@@ -628,7 +628,7 @@ export default function HomePage() {
               </h2>
               <p className="text-white/60 mb-8 max-w-md mx-auto text-sm sm:text-base">
                 Junte-se a mais de 200 pacientes que já estão alcançando
-                resultados reais com acompanhamento nutricional especializado em
+                resultados reais com acompanhamento nutricional com foco em
                 GLP-1.
               </p>
               <Link
@@ -658,8 +658,8 @@ export default function HomePage() {
                 className="h-10 w-auto object-contain mb-4 brightness-0 invert opacity-90"
               />
               <p className="text-sm leading-relaxed max-w-sm text-gray-400">
-                Plataforma de acompanhamento nutricional especializada em
-                canetas GLP-1. Cuide da sua saúde com orientação profissional e
+                Plataforma de acompanhamento nutricional com foco em canetas
+                GLP-1. Cuide da sua saúde com orientação profissional e
                 tecnologia.
               </p>
               <div className="mt-6 inline-flex items-center gap-3 bg-white/5 border border-white/10 rounded-xl px-4 py-3">

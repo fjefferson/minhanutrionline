@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 export const metadata: Metadata = {
   title: "Planos de Acompanhamento Nutricional para GLP-1",
   description:
-    "Escolha o plano ideal para o seu tratamento com GLP-1. Orientações por IA, chat com nutricionista e consultas online para quem usa Ozempic, Wegovy ou Mounjaro. Suporte especializado da nutricionista Elane Oliveira (CRN-14533).",
+    "Escolha o plano ideal para o seu tratamento com GLP-1. Orientações por IA, chat com nutricionista e consultas online para quem usa Ozempic, Wegovy ou Mounjaro. Acompanhamento com a nutricionista Elane Oliveira (CRN-14533).",
   alternates: {
     canonical: "https://minhanutrionline.com.br/planos",
   },
@@ -11,7 +11,7 @@ export const metadata: Metadata = {
     title:
       "Planos de Acompanhamento Nutricional para GLP-1 | MinhaNutri Online",
     description:
-      "Planos mensais com suporte nutricional especializado para tratamento com canetas emagrecedoras GLP-1. Ozempic, Wegovy e Mounjaro.",
+      "Planos mensais com suporte nutricional dedicado ao tratamento com canetas emagrecedoras GLP-1. Ozempic, Wegovy e Mounjaro.",
     url: "https://minhanutrionline.com.br/planos",
     type: "website",
   },
@@ -19,7 +19,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Planos | MinhaNutri Online",
     description:
-      "Planos de acompanhamento nutricional para GLP-1. Suporte especializado para Ozempic, Wegovy e Mounjaro.",
+      "Planos de acompanhamento nutricional para GLP-1. Suporte dedicado para Ozempic, Wegovy e Mounjaro.",
   },
 };
 

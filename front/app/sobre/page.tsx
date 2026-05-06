@@ -6,7 +6,7 @@ import HomeHeader from "@/components/layout/HomeHeader";
 export const metadata: Metadata = {
   title: "Sobre | MinhaNutri Online",
   description:
-    "Conheça a MinhaNutri Online e a nutricionista Elane Oliveira, especialista em GLP-1 e canetas emagrecedoras como Ozempic, Wegovy e Mounjaro.",
+    "Conheça a MinhaNutri Online e a nutricionista Elane Oliveira, com foco em canetas emagrecedoras como Ozempic, Wegovy e Mounjaro.",
   alternates: { canonical: "https://minhanutrionline.com.br/sobre" },
 };
 
@@ -49,10 +49,10 @@ export default function SobrePage() {
               Nutricionista · CRN-14533
             </p>
             <p className="text-gray-600 text-sm leading-relaxed">
-              Especialista em nutrição clínica com foco em emagrecimento e
-              tratamentos com análogos do GLP-1. Atende pacientes que utilizam
-              semaglutida (Ozempic, Wegovy) e tirzepatida (Mounjaro), auxiliando
-              na adaptação alimentar, controle de sintomas e resultados
+              Nutricionista clínica com foco em emagrecimento e tratamentos com
+              análogos do GLP-1. Atende pacientes que utilizam semaglutida
+              (Ozempic, Wegovy) e tirzepatida (Mounjaro), auxiliando na
+              adaptação alimentar, controle de sintomas e resultados
               sustentáveis.
             </p>
           </div>

@@ -224,7 +224,7 @@ export default function LoginPage() {
         <div className="absolute bottom-12 left-10 right-10">
           <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-6">
             <p className="text-white font-semibold text-lg leading-snug mb-1">
-              Nutrição especializada em GLP-1
+              Nutrição com foco em GLP-1
             </p>
             <p className="text-white/70 text-sm leading-relaxed">
               Acompanhamento personalizado com a nutricionista Elane Oliveira

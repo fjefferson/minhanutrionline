@@ -16,7 +16,7 @@ export const metadata: Metadata = {
     template: "%s | MinhaNutri Online",
   },
   description:
-    "Plataforma de acompanhamento nutricional especializada em canetas emagrecedoras GLP-1 (Ozempic, Wegovy, Mounjaro). Controle de sintomas, orientações por IA e consultas online com nutricionista.",
+    "Plataforma de acompanhamento nutricional com foco em canetas emagrecedoras GLP-1 (Ozempic, Wegovy, Mounjaro). Controle de sintomas, orientações por IA e consultas online com nutricionista.",
   keywords: [
     "GLP-1",
     "caneta emagrecedora",
@@ -50,21 +50,21 @@ export const metadata: Metadata = {
     locale: "pt_BR",
     url: SITE_URL,
     siteName: "MinhaNutri Online",
-    title: "MinhaNutri Online | Nutricionista especialista em Canetas GLP-1",
+    title: "MinhaNutri Online | Nutricionista com foco em Canetas GLP-1",
     description:
-      "Suporte nutricional online para quem usa Ozempic, Wegovy ou Mounjaro. Controle de sintomas, orientações por IA e consultas com nutricionista especialista em GLP-1.",
+      "Suporte nutricional online para quem usa Ozempic, Wegovy ou Mounjaro. Controle de sintomas, orientações por IA e consultas com nutricionista com foco em GLP-1.",
     images: [
       {
         url: "/images/avatar_atendimento_elane_oliveira_nutri.jpg",
         width: 1200,
         height: 630,
-        alt: "MinhaNutri Online — Nutricionista especialista em GLP-1",
+        alt: "MinhaNutri Online — Acompanhamento nutricional para GLP-1",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "MinhaNutri Online | Nutricionista especialista em GLP-1",
+    title: "MinhaNutri Online | Nutricionista com foco em GLP-1",
     description:
       "Acompanhamento nutricional para canetas emagrecedoras. Ozempic, Wegovy, Mounjaro. Orientação personalizada online.",
     images: ["/images/avatar_atendimento_elane_oliveira_nutri.jpg"],

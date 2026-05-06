@@ -57,9 +57,7 @@ export default function ContatoPage() {
                   <p className="text-green-300 text-xs">
                     Nutricionista · CRN-14533
                   </p>
-                  <p className="text-white/60 text-xs mt-0.5">
-                    Especialista em GLP-1
-                  </p>
+                  <p className="text-white/60 text-xs mt-0.5">Foco em GLP-1</p>
                 </div>
               </div>
             </div>

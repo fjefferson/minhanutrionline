@@ -186,7 +186,7 @@ export default function RegisterPage() {
   // ── Conteúdo lateral direito por step ─────────────────────────────────────
   const sideContent = [
     {
-      title: "Nutrição especializada em GLP-1",
+      title: "Nutrição com foco em GLP-1",
       body: "Acompanhamento personalizado com a nutricionista Elane Oliveira para otimizar os resultados do seu tratamento.",
     },
     {
@@ -194,7 +194,7 @@ export default function RegisterPage() {
       body: "Seus dados nos ajudam a personalizar cada orientação nutricional de acordo com seu perfil.",
     },
     {
-      title: "Suporte especializado em GLP-1",
+      title: "Suporte dedicado ao GLP-1",
       body: "Saber qual medicamento e quando você iniciou nos permite antecipar sintomas e ajustar sua alimentação.",
     },
   ][step - 1];
