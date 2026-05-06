@@ -457,16 +457,53 @@ export default function PerfilPage() {
           />
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Field label="Tipo de alimentação">
-              <select
-                value={form.dietType}
-                onChange={set("dietType")}
-                className={selectClass}
-              >
-                <option value="">Selecione</option>
-                <option value="OMNIVORE">Onívora</option>
-                <option value="VEGETARIAN">Vegetariana</option>
-                <option value="VEGAN">Vegana</option>
-              </select>
+              <div className="flex flex-col gap-2 pt-1">
+                {(
+                  [
+                    {
+                      value: "OMNIVORE",
+                      label: "Onívora",
+                      desc: "Come carne, peixe, ovos, laticínios e vegetais",
+                    },
+                    {
+                      value: "VEGETARIAN",
+                      label: "Vegetariana",
+                      desc: "Sem carnes; inclui ovos e/ou laticínios",
+                    },
+                    {
+                      value: "VEGAN",
+                      label: "Vegana",
+                      desc: "Sem nenhum produto de origem animal",
+                    },
+                  ] as { value: DietType; label: string; desc: string }[]
+                ).map((opt) => (
+                  <label
+                    key={opt.value}
+                    className={`flex items-start gap-3 cursor-pointer rounded-xl border px-4 py-3 transition-colors ${
+                      form.dietType === opt.value
+                        ? "border-green-500 bg-green-50"
+                        : "border-gray-200 hover:border-gray-300"
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="dietType"
+                      value={opt.value}
+                      checked={form.dietType === opt.value}
+                      onChange={set("dietType")}
+                      className="mt-0.5 accent-green-600"
+                    />
+                    <span>
+                      <span className="block text-sm font-medium text-gray-900">
+                        {opt.label}
+                      </span>
+                      <span className="block text-xs text-gray-500 leading-snug">
+                        {opt.desc}
+                      </span>
+                    </span>
+                  </label>
+                ))}
+              </div>
             </Field>
             <Field label="Refeições por dia">
               <input
