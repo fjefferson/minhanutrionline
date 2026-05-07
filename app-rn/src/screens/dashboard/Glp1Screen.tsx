@@ -18,7 +18,6 @@ import { LinearGradient } from 'react-native-linear-gradient';
 import Markdown from 'react-native-markdown-display';
 import api from '../../lib/api';
 import { useAuthStore } from '../../store/auth.store';
-import PlanLock from '../../components/PlanLock';
 
 /* ─── Types ─────────────────────────────────────────────── */
 interface Symptom {
@@ -37,7 +36,7 @@ interface Report {
   symptoms: { symptom: { name: string; slug: string } }[];
 }
 
-type View = 'history' | 'form' | 'result';
+type ScreenView = 'history' | 'form' | 'result';
 
 /* ─── Greeting helper ────────────────────────────────────── */
 function getGreeting(): string {
@@ -119,22 +118,6 @@ function ProfileGateModal({
 
 /* ─── Main Screen ────────────────────────────────────────── */
 export default function Glp1Screen() {
-  const { planType } = useAuthStore();
-  const plan = planType();
-
-  // IA Nutri requer pelo menos o plano BASIC
-  if (!plan) {
-    return (
-      <PlanLock
-        icon="flash"
-        featureName="IA Nutri"
-        description="Assine o plano Basic ou superior para acessar a IA Nutri e obter orientações personalizadas sobre GLP-1."
-        requiredPlan="Basic ou superior"
-        headerColors={['#0ea5e9', '#0284c7']}
-      />
-    );
-  }
-
   return <Glp1ScreenInner />;
 }
 
@@ -142,14 +125,16 @@ function Glp1ScreenInner() {
   const { user } = useAuthStore();
   const firstName = user?.name?.split(' ')[0] ?? '';
 
-  const [view, setView] = useState<View>('history');
+  const [view, setView] = useState<ScreenView>('history');
   const [history, setHistory] = useState<Report[]>([]);
   const [loadingHistory, setLoadingHistory] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
   const [symptoms, setSymptoms] = useState<Symptom[]>([]);
-  const [profileBlocked, setProfileBlocked] = useState(false);
-  const [freeLimitReached, setFreeLimitReached] = useState(false);
+  const [showProfileModal, setShowProfileModal] = useState(false);
+  const [showFreeLimitModal, setShowFreeLimitModal] = useState(false);
+  const [isProfileIncomplete, setIsProfileIncomplete] = useState(false);
+
   const [freeAiUsed, setFreeAiUsed] = useState(0);
   const [freeAiLimit] = useState(3);
   const [hasActivePlan, setHasActivePlan] = useState(false);
@@ -191,13 +176,12 @@ function Glp1ScreenInner() {
         const f = freeRes.value.data;
         setHasActivePlan(f.hasActivePlan);
         setFreeAiUsed(f.freeAiUsed);
-        setFreeLimitReached(!f.hasActivePlan && f.freeAiUsed >= f.freeAiLimit);
       }
       if (symRes.status === 'fulfilled') setSymptoms(symRes.value.data);
       if (profRes.status === 'fulfilled') {
         const p = profRes.value.data;
         const incomplete = !p.gender || !p.heightCm || !p.weightKg || !p.goal;
-        setProfileBlocked(!!incomplete);
+        setIsProfileIncomplete(!!incomplete);
       }
     } finally {
       setLoadingHistory(false);
@@ -246,7 +230,7 @@ function Glp1ScreenInner() {
       if (!hasActivePlan) setFreeAiUsed(u => u + 1);
     } catch (err: any) {
       if (err?.response?.data?.code === 'FREE_LIMIT_REACHED') {
-        setFreeLimitReached(true);
+        setShowFreeLimitModal(true);
       } else if (
         err?.code === 'ECONNABORTED' ||
         err?.message?.includes('timeout')
@@ -307,12 +291,12 @@ function Glp1ScreenInner() {
         </View>
 
         <FreeLimitModal
-          visible={freeLimitReached && view === 'history'}
-          onClose={() => setFreeLimitReached(false)}
+          visible={showFreeLimitModal && view === 'history'}
+          onClose={() => setShowFreeLimitModal(false)}
         />
         <ProfileGateModal
-          visible={profileBlocked}
-          onClose={() => setProfileBlocked(false)}
+          visible={showProfileModal}
+          onClose={() => setShowProfileModal(false)}
         />
 
         <ScrollView
@@ -381,7 +365,7 @@ function Glp1ScreenInner() {
               return (
                 <TouchableOpacity
                   key={report.id}
-                  style={styles.reportCard}
+                  style={styles.sessionCard}
                   onPress={() => {
                     setResult(report);
                     setRating(report.helpful);
@@ -390,128 +374,138 @@ function Glp1ScreenInner() {
                   }}
                   activeOpacity={0.85}
                 >
-                  {/* Cabeçalho: data + hora + rating */}
-                  <View style={styles.reportCardHeader}>
-                    <View style={styles.reportDateRow}>
-                      <Ionicons name="time-outline" size={12} color="#9ca3af" />
-                      <Text style={styles.reportDate}>
-                        {dateStr} • {timeStr}
-                      </Text>
-                    </View>
-                    <View style={styles.reportBadges}>
-                      {report.reviewRequested && (
-                        <View style={styles.badgeReview}>
-                          <Text style={styles.badgeReviewText}>Revisão</Text>
-                        </View>
-                      )}
-                      {report.helpful === true && (
-                        <Ionicons name="thumbs-up" size={14} color="#16a34a" />
-                      )}
-                      {report.helpful === false && (
-                        <Ionicons
-                          name="thumbs-down"
-                          size={14}
-                          color="#ef4444"
-                        />
-                      )}
-                      <Ionicons
-                        name="chevron-forward"
-                        size={14}
-                        color="#d1d5db"
-                      />
-                    </View>
-                  </View>
-
-                  {/* Chips de sintomas */}
-                  <View style={styles.symptomChipsRow}>
-                    {report.symptoms.slice(0, 4).map(s => (
+                  <View style={styles.sessionInfo}>
+                    <View style={styles.sessionRow}>
+                      <Text style={styles.sessionTitle}>Orientação GLP-1</Text>
                       <View
-                        key={s.symptom.slug}
-                        style={styles.symptomChipSmall}
+                        style={{
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          gap: 6,
+                        }}
                       >
-                        <Text style={styles.symptomChipSmallText}>
-                          {s.symptom.name}
+                        {report.reviewRequested && (
+                          <View style={styles.badgeReview}>
+                            <Text style={styles.badgeReviewText}>Revisão</Text>
+                          </View>
+                        )}
+                        {report.helpful === true && (
+                          <Ionicons
+                            name="thumbs-up"
+                            size={14}
+                            color="#16a34a"
+                          />
+                        )}
+                        {report.helpful === false && (
+                          <Ionicons
+                            name="thumbs-down"
+                            size={14}
+                            color="#ef4444"
+                          />
+                        )}
+                        <Text style={styles.sessionTime}>{dateStr}</Text>
+                        <Ionicons
+                          name="chevron-forward"
+                          size={14}
+                          color="#d1d5db"
+                        />
+                      </View>
+                    </View>
+
+                    {/* Chips de sintomas */}
+                    <View style={styles.symptomChipsRow}>
+                      {report.symptoms.slice(0, 4).map(s => (
+                        <View
+                          key={s.symptom.slug}
+                          style={styles.symptomChipSmall}
+                        >
+                          <Text style={styles.symptomChipSmallText}>
+                            {s.symptom.name}
+                          </Text>
+                        </View>
+                      ))}
+                      {report.symptoms.length > 4 && (
+                        <Text style={styles.moreChips}>
+                          +{report.symptoms.length - 4}
+                        </Text>
+                      )}
+                    </View>
+
+                    {/* Evolução em relação ao anterior */}
+                    {(improved.length > 0 || worsened.length > 0) && (
+                      <View style={styles.evolutionInlineRow}>
+                        {improved.length > 0 && (
+                          <View style={styles.evolutionPill}>
+                            <Ionicons
+                              name="trending-down"
+                              size={11}
+                              color="#15803d"
+                            />
+                            <Text style={styles.evolutionPillGreen}>
+                              Melhorou:{' '}
+                              {improved
+                                .map(
+                                  sl =>
+                                    prev!.symptoms.find(
+                                      s => s.symptom.slug === sl,
+                                    )?.symptom.name ?? sl,
+                                )
+                                .join(', ')}
+                            </Text>
+                          </View>
+                        )}
+                        {worsened.length > 0 && (
+                          <View
+                            style={[
+                              styles.evolutionPill,
+                              styles.evolutionPillOrangeWrap,
+                            ]}
+                          >
+                            <Ionicons
+                              name="trending-up"
+                              size={11}
+                              color="#c2410c"
+                            />
+                            <Text style={styles.evolutionPillOrange}>
+                              Novo:{' '}
+                              {worsened
+                                .map(
+                                  sl =>
+                                    report.symptoms.find(
+                                      s => s.symptom.slug === sl,
+                                    )?.symptom.name ?? sl,
+                                )
+                                .join(', ')}
+                            </Text>
+                          </View>
+                        )}
+                      </View>
+                    )}
+
+                    {/* Nota da paciente */}
+                    {!!report.extraNotes && (
+                      <View style={styles.reportNoteRow}>
+                        <Ionicons
+                          name="chatbubble-ellipses-outline"
+                          size={12}
+                          color="#6b7280"
+                        />
+                        <Text style={styles.reportNoteText} numberOfLines={1}>
+                          {report.extraNotes}
                         </Text>
                       </View>
-                    ))}
-                    {report.symptoms.length > 4 && (
-                      <Text style={styles.moreChips}>
-                        +{report.symptoms.length - 4}
-                      </Text>
                     )}
-                  </View>
 
-                  {/* Evolução em relação ao anterior */}
-                  {(improved.length > 0 || worsened.length > 0) && (
-                    <View style={styles.evolutionInlineRow}>
-                      {improved.length > 0 && (
-                        <View style={styles.evolutionPill}>
-                          <Ionicons
-                            name="trending-down"
-                            size={11}
-                            color="#15803d"
-                          />
-                          <Text style={styles.evolutionPillGreen}>
-                            Melhorou:{' '}
-                            {improved
-                              .map(
-                                sl =>
-                                  prev!.symptoms.find(
-                                    s => s.symptom.slug === sl,
-                                  )?.symptom.name ?? sl,
-                              )
-                              .join(', ')}
-                          </Text>
-                        </View>
-                      )}
-                      {worsened.length > 0 && (
-                        <View
-                          style={[
-                            styles.evolutionPill,
-                            styles.evolutionPillOrangeWrap,
-                          ]}
-                        >
-                          <Ionicons
-                            name="trending-up"
-                            size={11}
-                            color="#c2410c"
-                          />
-                          <Text style={styles.evolutionPillOrange}>
-                            Novo:{' '}
-                            {worsened
-                              .map(
-                                sl =>
-                                  report.symptoms.find(
-                                    s => s.symptom.slug === sl,
-                                  )?.symptom.name ?? sl,
-                              )
-                              .join(', ')}
-                          </Text>
-                        </View>
-                      )}
-                    </View>
-                  )}
-
-                  {/* Nota da paciente */}
-                  {!!report.extraNotes && (
-                    <View style={styles.reportNoteRow}>
-                      <Ionicons
-                        name="chatbubble-ellipses-outline"
-                        size={12}
-                        color="#6b7280"
-                      />
-                      <Text style={styles.reportNoteText} numberOfLines={1}>
-                        {report.extraNotes}
+                    {/* Preview da resposta IA */}
+                    <View style={styles.reportAiPreview}>
+                      <Ionicons name="flash" size={11} color="#16a34a" />
+                      <Text
+                        style={styles.reportAiPreviewText}
+                        numberOfLines={2}
+                      >
+                        {stripMd(report.aiResponse)}
                       </Text>
                     </View>
-                  )}
-
-                  {/* Preview da resposta IA */}
-                  <View style={styles.reportAiPreview}>
-                    <Ionicons name="flash" size={11} color="#16a34a" />
-                    <Text style={styles.reportAiPreviewText} numberOfLines={2}>
-                      {stripMd(report.aiResponse)}
-                    </Text>
                   </View>
                 </TouchableOpacity>
               );
@@ -521,13 +515,16 @@ function Glp1ScreenInner() {
 
         {/* FAB: Nova orientação */}
         <TouchableOpacity
-          style={[
-            styles.fab,
-            (freeLimitReached || profileBlocked) && styles.fabDisabled,
-          ]}
+          style={[styles.fab]}
           onPress={() => {
-            if (profileBlocked) return;
-            if (freeLimitReached) return;
+            if (isProfileIncomplete) {
+              setShowProfileModal(true);
+              return;
+            }
+            if (!hasActivePlan && freeAiUsed >= freeAiLimit) {
+              setShowFreeLimitModal(true);
+              return;
+            }
             goToForm();
           }}
           activeOpacity={0.85}
@@ -991,33 +988,28 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
 
-  reportCard: {
+  sessionCard: {
     backgroundColor: '#fff',
-    borderRadius: 16,
+    borderRadius: 20,
     padding: 16,
     marginBottom: 12,
-    elevation: 2,
+    elevation: 3,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.02)',
   },
-  reportCardHeader: {
+  sessionInfo: { flex: 1 },
+  sessionRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 10,
   },
-  reportDateRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  reportDate: { fontSize: 12, color: '#9ca3af', fontWeight: '500' },
-  reportBadges: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  badgeReview: {
-    backgroundColor: '#ede9fe',
-    borderRadius: 10,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-  },
-  badgeReviewText: { fontSize: 10, color: '#7c3aed', fontWeight: '700' },
+  sessionTitle: { fontSize: 13, fontWeight: '700', color: '#111827' },
+  sessionTime: { fontSize: 12, color: '#9ca3af' },
 
   symptomChipsRow: {
     flexDirection: 'row',
@@ -1025,6 +1017,13 @@ const styles = StyleSheet.create({
     gap: 6,
     marginBottom: 8,
   },
+  badgeReview: {
+    backgroundColor: '#ede9fe',
+    borderRadius: 10,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+  },
+  badgeReviewText: { fontSize: 10, color: '#7c3aed', fontWeight: '700' },
   symptomChipSmall: {
     backgroundColor: '#dcfce7',
     borderRadius: 20,
