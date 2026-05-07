@@ -171,6 +171,13 @@ export default function Glp1Page() {
       .finally(() => setLoadingHistory(false));
   };
 
+  const loadSymptoms = () => {
+    api
+      .get("/glp1/symptoms")
+      .then((r) => setSymptoms(r.data))
+      .catch(() => {});
+  };
+
   const loadFreeStatus = () => {
     api
       .get("/glp1/free-status")
@@ -188,10 +195,7 @@ export default function Glp1Page() {
   useEffect(() => {
     loadHistory();
     loadFreeStatus();
-    api
-      .get("/glp1/symptoms")
-      .then((r) => setSymptoms(r.data))
-      .catch(() => {});
+    loadSymptoms();
     api
       .get("/profile/nutritional")
       .then((r) => {
@@ -210,6 +214,7 @@ export default function Glp1Page() {
     );
 
   const openForm = () => {
+    loadSymptoms();
     setSelected([]);
     setNotes("");
     setFormError("");

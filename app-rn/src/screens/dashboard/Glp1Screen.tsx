@@ -198,16 +198,24 @@ function Glp1ScreenInner() {
   const [reviewReason, setReviewReason] = useState('');
   const [showReviewInput, setShowReviewInput] = useState(false);
 
+  const loadSymptoms = useCallback(async () => {
+    try {
+      const response = await api.get<Symptom[]>('/glp1/symptoms');
+      setSymptoms(response.data);
+    } catch {
+      // silencioso
+    }
+  }, []);
+
   const loadData = useCallback(async () => {
     try {
-      const [histRes, freeRes, symRes, profRes] = await Promise.allSettled([
+      const [histRes, freeRes, profRes] = await Promise.allSettled([
         api.get<Report[]>('/glp1/reports'),
         api.get<{
           hasActivePlan: boolean;
           freeAiUsed: number;
           freeAiLimit: number;
         }>('/glp1/free-status'),
-        api.get<Symptom[]>('/glp1/symptoms'),
         api.get<{
           gender?: string;
           heightCm?: number;
@@ -222,7 +230,6 @@ function Glp1ScreenInner() {
         setHasActivePlan(f.hasActivePlan);
         setFreeAiUsed(f.freeAiUsed);
       }
-      if (symRes.status === 'fulfilled') setSymptoms(symRes.value.data);
       if (profRes.status === 'fulfilled') {
         const p = profRes.value.data;
         const incomplete = !p.gender || !p.heightCm || !p.weightKg || !p.goal;
@@ -236,6 +243,7 @@ function Glp1ScreenInner() {
 
   useEffect(() => {
     loadData();
+    loadSymptoms();
   }, [loadData]);
 
   const onRefresh = () => {
@@ -331,6 +339,7 @@ function Glp1ScreenInner() {
   };
 
   const goToForm = () => {
+    loadSymptoms();
     setSelected([]);
     setNotes('');
     setFormError('');

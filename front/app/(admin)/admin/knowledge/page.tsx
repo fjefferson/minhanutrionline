@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import api from "@/lib/api";
+import ReactMarkdown from "react-markdown";
 
 interface KnowledgeItem {
   id: string;
@@ -17,6 +18,159 @@ interface Symptom {
 }
 
 const EMPTY_FORM = { title: "", content: "", symptoms: [] as string[] };
+const TOOLBAR_ACTIONS = [
+  {
+    label: "H2",
+    apply: (value: string) =>
+      `${value ? `${value}\n\n` : ""}## Titulo da secao\n`,
+  },
+  {
+    label: "Negrito",
+    apply: (value: string) => `${value}**texto em destaque**`,
+  },
+  {
+    label: "Lista",
+    apply: (value: string) =>
+      `${value}${value ? "\n" : ""}- Primeiro ponto\n- Segundo ponto`,
+  },
+  {
+    label: "Passos",
+    apply: (value: string) =>
+      `${value}${value ? "\n" : ""}1. Primeiro passo\n2. Segundo passo`,
+  },
+  {
+    label: "Dica",
+    apply: (value: string) =>
+      `${value}${value ? "\n\n" : ""}> Observacao importante para a conduta`,
+  },
+];
+
+function stripMarkdown(text: string) {
+  return text
+    .replace(/#{1,6}\s?/g, "")
+    .replace(/\*\*([^*]+)\*\*/g, "$1")
+    .replace(/\*([^*]+)\*/g, "$1")
+    .replace(/`([^`]+)`/g, "$1")
+    .replace(/^>\s?/gm, "")
+    .replace(/^[-*+]\s+/gm, "")
+    .replace(/^\d+\.\s+/gm, "")
+    .replace(/\n+/g, " ")
+    .trim();
+}
+
+function KnowledgeEditor({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  const applyFormat = (formatter: (value: string) => string) => {
+    const nextValue = formatter(value.trimEnd());
+    onChange(nextValue);
+  };
+
+  return (
+    <div className="rounded-2xl border border-gray-200 overflow-hidden bg-white">
+      <div className="flex flex-wrap items-center gap-2 border-b border-gray-200 bg-gray-50 px-3 py-3">
+        {TOOLBAR_ACTIONS.map((action) => (
+          <button
+            key={action.label}
+            type="button"
+            onClick={() => applyFormat(action.apply)}
+            className="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 transition hover:border-green-300 hover:text-green-700"
+          >
+            {action.label}
+          </button>
+        ))}
+        <span className="ml-auto text-xs text-gray-400">
+          Markdown limpo para a IA
+        </span>
+      </div>
+
+      <div className="grid gap-0 lg:grid-cols-2">
+        <div className="border-b border-gray-200 lg:border-r lg:border-b-0">
+          <div className="border-b border-gray-100 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-gray-400">
+            Edicao
+          </div>
+          <textarea
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            rows={14}
+            className="min-h-80 w-full resize-y border-0 bg-white px-4 py-4 font-mono text-sm leading-6 text-gray-900 focus:outline-none focus:ring-0"
+            placeholder="Escreva o conteudo com estrutura. Ex:\n\n## O que orientar\n- Comer devagar\n- Priorizar proteinas\n\n> Evite condutas alarmistas"
+          />
+        </div>
+
+        <div>
+          <div className="border-b border-gray-100 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-gray-400">
+            Pre-visualizacao
+          </div>
+          <div className="px-4 py-4 text-gray-700">
+            {value.trim() ? (
+              <ReactMarkdown
+                components={{
+                  h1: ({ children }) => (
+                    <h1 className="mb-3 text-2xl font-bold text-gray-900">
+                      {children}
+                    </h1>
+                  ),
+                  h2: ({ children }) => (
+                    <h2 className="mb-3 text-xl font-bold text-gray-900">
+                      {children}
+                    </h2>
+                  ),
+                  h3: ({ children }) => (
+                    <h3 className="mb-2 text-lg font-semibold text-gray-900">
+                      {children}
+                    </h3>
+                  ),
+                  p: ({ children }) => (
+                    <p className="mb-3 text-sm leading-7 text-gray-700">
+                      {children}
+                    </p>
+                  ),
+                  ul: ({ children }) => (
+                    <ul className="mb-3 list-disc space-y-1 pl-5 text-sm leading-7 marker:text-green-600">
+                      {children}
+                    </ul>
+                  ),
+                  ol: ({ children }) => (
+                    <ol className="mb-3 list-decimal space-y-1 pl-5 text-sm leading-7 marker:font-semibold marker:text-green-600">
+                      {children}
+                    </ol>
+                  ),
+                  li: ({ children }) => <li className="pl-1">{children}</li>,
+                  blockquote: ({ children }) => (
+                    <blockquote className="mb-3 rounded-r-xl border-l-4 border-green-300 bg-green-50 px-4 py-3 text-sm italic text-gray-600">
+                      {children}
+                    </blockquote>
+                  ),
+                  strong: ({ children }) => (
+                    <strong className="font-semibold text-gray-900">
+                      {children}
+                    </strong>
+                  ),
+                  code: ({ children }) => (
+                    <code className="rounded bg-gray-100 px-1.5 py-0.5 font-mono text-[13px] text-green-700">
+                      {children}
+                    </code>
+                  ),
+                }}
+              >
+                {value}
+              </ReactMarkdown>
+            ) : (
+              <p className="text-sm text-gray-400">
+                A formatacao aparecera aqui conforme voce escreve.
+              </p>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function KnowledgePage() {
   const [items, setItems] = useState<KnowledgeItem[]>([]);
@@ -68,8 +222,11 @@ export default function KnowledgePage() {
     }));
   };
 
+  const canSave =
+    !!form.title.trim() && !!form.content.trim() && form.symptoms.length > 0;
+
   const save = async () => {
-    if (!form.title.trim() || !form.content.trim()) return;
+    if (!canSave) return;
     setSaving(true);
     try {
       if (editing) {
@@ -140,14 +297,9 @@ export default function KnowledgePage() {
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Conteúdo
             </label>
-            <textarea
+            <KnowledgeEditor
               value={form.content}
-              onChange={(e) =>
-                setForm((f) => ({ ...f, content: e.target.value }))
-              }
-              rows={6}
-              className="w-full border border-gray-300 rounded-xl px-4 py-3 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-green-500 resize-none"
-              placeholder="Descreva as orientações nutricionais..."
+              onChange={(value) => setForm((f) => ({ ...f, content: value }))}
             />
           </div>
 
@@ -176,7 +328,7 @@ export default function KnowledgePage() {
           <div className="flex gap-3">
             <button
               onClick={save}
-              disabled={saving || !form.title.trim() || !form.content.trim()}
+              disabled={saving || !canSave}
               className="bg-green-600 text-white px-6 py-2.5 rounded-xl font-medium text-sm hover:bg-green-700 transition disabled:opacity-50"
             >
               {saving ? "Salvando..." : "Salvar"}
@@ -209,7 +361,7 @@ export default function KnowledgePage() {
                     {item.title}
                   </h3>
                   <p className="text-sm text-gray-600 line-clamp-2 mb-3">
-                    {item.content}
+                    {stripMarkdown(item.content)}
                   </p>
                   <div className="flex flex-wrap gap-1.5">
                     {item.symptoms.length > 0 ? (
