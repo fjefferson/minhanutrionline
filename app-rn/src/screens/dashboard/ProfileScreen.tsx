@@ -397,7 +397,7 @@ export default function ProfileScreen() {
       style={styles.root}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      <LinearGradient colors={['#16a34a', '#15803d']} style={styles.header}>
+      <View style={styles.header}>
         {/* Avatar com botão de edição */}
         <TouchableOpacity
           style={styles.avatarWrapper}
@@ -425,7 +425,7 @@ export default function ProfileScreen() {
         </TouchableOpacity>
         <Text style={styles.headerName}>{user?.name}</Text>
         <Text style={styles.headerEmail}>{user?.email}</Text>
-      </LinearGradient>
+      </View>
 
       <ScrollView
         contentContainerStyle={styles.scroll}
@@ -828,46 +828,54 @@ const styles = StyleSheet.create({
   loadingRoot: { flex: 1, justifyContent: 'center', alignItems: 'center' },
 
   header: {
-    paddingTop: 52,
+    paddingTop: Platform.OS === 'ios' ? 60 : 40,
     paddingBottom: 24,
     alignItems: 'center',
-    gap: 6,
+    gap: 8,
+    backgroundColor: '#ffffff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#f3f4f6',
   },
   avatarWrapper: {
     position: 'relative',
-    marginBottom: 4,
+    marginBottom: 8,
   },
   avatarImage: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    borderWidth: 2,
-    borderColor: 'rgba(255,255,255,0.6)',
+    width: 88,
+    height: 88,
+    borderRadius: 44,
+    borderWidth: 3,
+    borderColor: '#f3f4f6',
   },
   avatarCircle: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    backgroundColor: 'rgba(255,255,255,0.25)',
+    width: 88,
+    height: 88,
+    borderRadius: 44,
+    backgroundColor: '#e5e7eb',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  avatarInitial: { fontSize: 30, fontWeight: '800', color: '#fff' },
+  avatarInitial: { fontSize: 36, fontWeight: '800', color: '#374151' },
   avatarEditBadge: {
     position: 'absolute',
     bottom: 0,
     right: 0,
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    backgroundColor: '#15803d',
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: '#2563EB',
     borderWidth: 2,
     borderColor: '#fff',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  headerName: { fontSize: 18, fontWeight: '800', color: '#fff' },
-  headerEmail: { fontSize: 13, color: 'rgba(255,255,255,0.75)' },
+  headerName: {
+    fontSize: 26,
+    fontWeight: '800',
+    color: '#111827',
+    letterSpacing: -0.5,
+  },
+  headerEmail: { fontSize: 14, color: '#6b7280' },
 
   scroll: { padding: 20, paddingBottom: 48 },
 
@@ -929,17 +937,27 @@ const styles = StyleSheet.create({
   chipTextActive: { color: '#fff', fontWeight: '700' },
 
   saveBtn: {
+    backgroundColor: '#2563EB', // Royal Blue
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
-    backgroundColor: '#16a34a',
-    borderRadius: 14,
-    paddingVertical: 16,
+    borderRadius: 100, // Pílula perfeita
+    paddingVertical: 14,
     marginTop: 28,
+    gap: 8,
+    elevation: 6,
+    shadowColor: '#2563EB',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.25,
+    shadowRadius: 16,
   },
   saveBtnDisabled: { opacity: 0.6 },
-  saveBtnText: { color: '#fff', fontWeight: '700', fontSize: 16 },
+  saveBtnText: {
+    color: '#fff',
+    fontSize: 17,
+    fontWeight: '700',
+    letterSpacing: 0.3,
+  },
 
   // ── Conta ────────────────────────────────────────────────
   accountCard: {

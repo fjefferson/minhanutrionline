@@ -18,6 +18,7 @@ import { LinearGradient } from 'react-native-linear-gradient';
 import Markdown from 'react-native-markdown-display';
 import api from '../../lib/api';
 import { useAuthStore } from '../../store/auth.store';
+import PlanLock from '../../components/PlanLock';
 
 /* ─── Types ─────────────────────────────────────────────── */
 interface Symptom {
@@ -118,6 +119,26 @@ function ProfileGateModal({
 
 /* ─── Main Screen ────────────────────────────────────────── */
 export default function Glp1Screen() {
+  const { planType } = useAuthStore();
+  const plan = planType();
+
+  // IA Nutri requer pelo menos o plano BASIC
+  if (!plan) {
+    return (
+      <PlanLock
+        icon="flash"
+        featureName="IA Nutri"
+        description="Assine o plano Basic ou superior para acessar a IA Nutri e obter orientações personalizadas sobre GLP-1."
+        requiredPlan="Basic ou superior"
+        headerColors={['#0ea5e9', '#0284c7']}
+      />
+    );
+  }
+
+  return <Glp1ScreenInner />;
+}
+
+function Glp1ScreenInner() {
   const { user } = useAuthStore();
   const firstName = user?.name?.split(' ')[0] ?? '';
 
@@ -278,12 +299,12 @@ export default function Glp1Screen() {
   if (view === 'history') {
     return (
       <View style={styles.root}>
-        <LinearGradient colors={['#16a34a', '#15803d']} style={styles.header}>
+        <View style={styles.header}>
           <Text style={styles.headerTitle}>Orientação IA</Text>
           <Text style={styles.headerSub}>
             Orientações sobre sintomas com GLP-1
           </Text>
-        </LinearGradient>
+        </View>
 
         <FreeLimitModal
           visible={freeLimitReached && view === 'history'}
@@ -523,19 +544,19 @@ export default function Glp1Screen() {
         style={styles.root}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
-        <LinearGradient colors={['#16a34a', '#15803d']} style={styles.header}>
+        <View style={styles.header}>
           <TouchableOpacity
             onPress={() => setView('history')}
             style={styles.backBtn}
           >
-            <Ionicons name="arrow-back" size={20} color="#fff" />
+            <Ionicons name="arrow-back" size={20} color="#111827" />
             <Text style={styles.backBtnText}>Voltar</Text>
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Nova orientação</Text>
           <Text style={styles.headerSub}>
             Selecione os sintomas que está sentindo
           </Text>
-        </LinearGradient>
+        </View>
 
         <ScrollView
           contentContainerStyle={styles.scroll}
@@ -642,19 +663,19 @@ export default function Glp1Screen() {
   /* ── RESULT VIEW ── */
   return (
     <View style={styles.root}>
-      <LinearGradient colors={['#16a34a', '#15803d']} style={styles.header}>
+      <View style={styles.header}>
         <TouchableOpacity
           onPress={() => setView('history')}
           style={styles.backBtn}
         >
-          <Ionicons name="arrow-back" size={20} color="#fff" />
+          <Ionicons name="arrow-back" size={20} color="#111827" />
           <Text style={styles.backBtnText}>Voltar</Text>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Orientação da IA</Text>
         <Text style={styles.headerSub}>
           {result?.symptoms.map(s => s.symptom.name).join(', ')}
         </Text>
-      </LinearGradient>
+      </View>
 
       <ScrollView contentContainerStyle={styles.scroll}>
         {/* Evolução em relação à orientação anterior */}
@@ -897,21 +918,26 @@ const markdownStyles = StyleSheet.create({
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: '#f9fafb' },
   header: {
-    paddingTop: 52,
-    paddingBottom: 20,
-    paddingHorizontal: 20,
-    borderBottomLeftRadius: 20,
-    borderBottomRightRadius: 20,
+    paddingTop: Platform.OS === 'ios' ? 60 : 40,
+    paddingBottom: 24,
+    paddingHorizontal: 24,
+    backgroundColor: '#f9fafb',
   },
-  headerTitle: { fontSize: 22, fontWeight: '800', color: '#fff', marginTop: 4 },
-  headerSub: { fontSize: 13, color: 'rgba(255,255,255,0.8)', marginTop: 4 },
+  headerTitle: {
+    fontSize: 26,
+    fontWeight: '800',
+    color: '#111827',
+    letterSpacing: -0.5,
+    marginTop: 4,
+  },
+  headerSub: { fontSize: 16, color: '#6b7280', marginTop: 4 },
   backBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
     marginBottom: 4,
   },
-  backBtnText: { color: 'rgba(255,255,255,0.9)', fontSize: 14 },
+  backBtnText: { color: '#4b5563', fontSize: 15, fontWeight: '500' },
   scroll: { padding: 16, paddingBottom: 40 },
 
   freeCounter: {
@@ -927,17 +953,29 @@ const styles = StyleSheet.create({
   freeCounterText: { fontSize: 13, color: '#92400e', fontWeight: '600' },
 
   newBtn: {
+    backgroundColor: '#2563EB', // Royal Blue
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
-    backgroundColor: '#16a34a',
-    borderRadius: 14,
+    alignSelf: 'flex-start',
+    paddingHorizontal: 24,
+    borderRadius: 100, // Pílula
     paddingVertical: 14,
     marginBottom: 20,
+    gap: 8,
+    elevation: 6,
+    shadowColor: '#2563EB',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.25,
+    shadowRadius: 16,
   },
   newBtnDisabled: { opacity: 0.5 },
-  newBtnText: { color: '#fff', fontWeight: '700', fontSize: 16 },
+  newBtnText: {
+    color: '#fff',
+    fontSize: 17,
+    fontWeight: '700',
+    letterSpacing: 0.3,
+  },
 
   emptyBox: { alignItems: 'center', paddingTop: 40, gap: 12 },
   emptyTitle: { fontSize: 16, fontWeight: '700', color: '#374151' },
@@ -1111,17 +1149,27 @@ const styles = StyleSheet.create({
   errorText: { color: '#ef4444', fontSize: 13, marginBottom: 12 },
 
   submitBtn: {
+    backgroundColor: '#2563EB', // Royal Blue
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
-    backgroundColor: '#16a34a',
-    borderRadius: 14,
-    paddingVertical: 15,
+    borderRadius: 100, // Pílula perfeita
+    paddingVertical: 14,
     marginTop: 4,
+    gap: 8,
+    elevation: 6,
+    shadowColor: '#2563EB',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.25,
+    shadowRadius: 16,
   },
   submitBtnDisabled: { opacity: 0.6 },
-  submitBtnText: { color: '#fff', fontWeight: '700', fontSize: 16 },
+  submitBtnText: {
+    color: '#fff',
+    fontSize: 17,
+    fontWeight: '700',
+    letterSpacing: 0.3,
+  },
 
   aiCard: {
     backgroundColor: '#fff',

@@ -10,6 +10,8 @@ import LoginScreen from '../screens/auth/LoginScreen';
 import RegisterScreen from '../screens/auth/RegisterScreen';
 import MainNavigator from './MainNavigator';
 import AnamnesisNavigator from './AnamnesisNavigator';
+import PlansScreen from '../screens/plans/PlansScreen';
+import CheckoutScreen from '../screens/plans/CheckoutScreen';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -64,6 +66,8 @@ export default function RootNavigator() {
     return (
       <Stack.Navigator screenOptions={{ headerShown: false }}>
         <Stack.Screen name="Main" component={MainNavigator} />
+        <Stack.Screen name="Plans" component={PlansScreen} />
+        <Stack.Screen name="Checkout" component={CheckoutScreen} />
       </Stack.Navigator>
     );
   }

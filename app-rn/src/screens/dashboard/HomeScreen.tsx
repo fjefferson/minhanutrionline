@@ -7,14 +7,22 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   RefreshControl,
+  Image,
+  StatusBar,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { LinearGradient } from 'react-native-linear-gradient';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useAuthStore } from '../../store/auth.store';
 import api from '../../lib/api';
-import type { MainTabParamList } from '../../navigation/types';
+import type {
+  MainTabParamList,
+  RootStackParamList,
+} from '../../navigation/types';
+
+const NUTRI_AVATAR = require('../../assets/images/avatar_atendimento_elane_oliveira_nutri.jpg');
 
 interface ProfileData {
   glp1Medication?: string | null;
@@ -31,47 +39,37 @@ const GOAL_LABEL: Record<string, string> = {
   LOSE_WEIGHT: 'Emagrecer',
   MAINTAIN: 'Manter peso',
   GAIN_MUSCLE: 'Ganhar músculo',
-  CONTROL_GLYCEMIA: 'Controlar glicemia',
+  CONTROL_GLYCEMIA: 'Glicemia',
 };
 
 const ACTIVITY_LABEL: Record<string, string> = {
   SEDENTARY: 'Sedentária',
-  LIGHT: 'Levemente ativa',
+  LIGHT: 'Leve',
   MODERATE: 'Moderada',
-  INTENSE: 'Muito ativa',
+  INTENSE: 'Intensa',
 };
 
-const DIET_LABEL: Record<string, string> = {
-  OMNIVORE: 'Onívora',
-  VEGETARIAN: 'Vegetariana',
-  VEGAN: 'Vegana',
+const PLAN_COLOR: Record<string, [string, string]> = {
+  BASIC: ['#0ea5e9', '#0284c7'],
+  PLUS: ['#8b5cf6', '#7c3aed'],
+  PREMIUM: ['#f59e0b', '#d97706'],
 };
 
-const QUICK_ACTIONS: {
-  icon: string;
-  label: string;
-  route: keyof MainTabParamList;
-  color: string;
-}[] = [
-  {
-    icon: 'chatbubble-ellipses',
-    label: 'Chat',
-    route: 'Chat',
-    color: '#16a34a',
-  },
-  { icon: 'flash', label: 'IA Nutri', route: 'Glp1', color: '#f59e0b' },
-  { icon: 'library', label: 'Materiais', route: 'Materials', color: '#0ea5e9' },
-  { icon: 'person', label: 'Perfil', route: 'Profile', color: '#8b5cf6' },
-];
+const PLAN_ICON: Record<string, string> = {
+  BASIC: 'leaf',
+  PLUS: 'star',
+  PREMIUM: 'diamond',
+};
 
 export default function HomeScreen() {
-  const navigation = useNavigation<BottomTabNavigationProp<MainTabParamList>>();
-  const { user, logout } = useAuthStore();
+  const tabNav = useNavigation<BottomTabNavigationProp<MainTabParamList>>();
+  const rootNav =
+    useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const { user, planType } = useAuthStore();
+  const plan = planType();
   const [profile, setProfile] = useState<ProfileData | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-
-  const firstName = user?.name?.split(' ')[0] ?? 'Paciente';
 
   const loadProfile = async () => {
     try {
@@ -94,269 +92,472 @@ export default function HomeScreen() {
     loadProfile();
   };
 
+  const planColors: [string, string] = plan
+    ? PLAN_COLOR[plan] ?? ['#16a34a', '#15803d']
+    : ['#16a34a', '#059669'];
+
   return (
-    <ScrollView
-      style={styles.root}
-      contentContainerStyle={styles.content}
-      showsVerticalScrollIndicator={false}
-      refreshControl={
-        <RefreshControl
-          refreshing={refreshing}
-          onRefresh={onRefresh}
-          tintColor="#16a34a"
-        />
-      }
-    >
-      {/* Header */}
-      <LinearGradient colors={['#16a34a', '#15803d']} style={styles.header}>
-        <View style={styles.headerTop}>
-          <View>
-            <Text style={styles.headerGreet}>Olá, {firstName} 👋</Text>
-            <Text style={styles.headerSub}>Como você está hoje?</Text>
-          </View>
-          <TouchableOpacity onPress={logout} style={styles.logoutBtn}>
-            <Ionicons
-              name="log-out-outline"
-              size={22}
-              color="rgba(255,255,255,0.8)"
-            />
+    <View style={styles.root}>
+      <StatusBar barStyle="dark-content" backgroundColor="#f8fafc" />
+      <ScrollView
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor="#16a34a"
+          />
+        }
+      >
+        {/* ── Hero card — plano ─────────────────────── */}
+        <TouchableOpacity
+          style={styles.heroCard}
+          activeOpacity={0.9}
+          onPress={() => rootNav.navigate('Plans')}
+        >
+          <LinearGradient
+            colors={planColors}
+            style={styles.heroGrad}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+          >
+            <View style={styles.heroDeco1} />
+            <View style={styles.heroDeco2} />
+            <View style={styles.heroBody}>
+              <View style={styles.heroLeft}>
+                <View style={styles.heroIconWrap}>
+                  <Ionicons
+                    name={plan ? PLAN_ICON[plan] ?? 'star' : 'rocket-outline'}
+                    size={26}
+                    color="#fff"
+                  />
+                </View>
+                <View>
+                  <Text style={styles.heroLabel}>Plano atual</Text>
+                  <Text style={styles.heroName}>
+                    {plan
+                      ? plan.charAt(0) + plan.slice(1).toLowerCase()
+                      : 'Gratuito'}
+                  </Text>
+                  {profile?.glp1Medication ? (
+                    <View style={styles.heroPill}>
+                      <Ionicons
+                        name="medical"
+                        size={10}
+                        color="rgba(255,255,255,0.9)"
+                      />
+                      <Text style={styles.heroPillText}>
+                        {profile.glp1Medication}
+                      </Text>
+                    </View>
+                  ) : null}
+                </View>
+              </View>
+              <View style={styles.heroRight}>
+                <Text style={styles.heroCtaText}>
+                  {plan ? 'Ver planos' : 'Assinar'}
+                </Text>
+                <Ionicons
+                  name="arrow-forward"
+                  size={15}
+                  color="rgba(255,255,255,0.9)"
+                />
+              </View>
+            </View>
+          </LinearGradient>
+        </TouchableOpacity>
+
+        {/* ── Stats chips ───────────────────────────── */}
+        {!loading && profile && (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.statsRow}
+          >
+            {!!profile.weightKg && (
+              <View style={[styles.statCard, { backgroundColor: '#eff6ff' }]}>
+                <View style={[styles.statIcon, { backgroundColor: '#dbeafe' }]}>
+                  <Ionicons name="scale-outline" size={17} color="#3b82f6" />
+                </View>
+                <Text style={styles.statValue}>
+                  {profile.weightKg}
+                  <Text style={styles.statUnit}> kg</Text>
+                </Text>
+                <Text style={styles.statLabel}>Peso</Text>
+              </View>
+            )}
+            {!!profile.heightCm && (
+              <View style={[styles.statCard, { backgroundColor: '#f0fdf4' }]}>
+                <View style={[styles.statIcon, { backgroundColor: '#dcfce7' }]}>
+                  <Ionicons name="resize-outline" size={17} color="#16a34a" />
+                </View>
+                <Text style={styles.statValue}>
+                  {profile.heightCm}
+                  <Text style={styles.statUnit}> cm</Text>
+                </Text>
+                <Text style={styles.statLabel}>Altura</Text>
+              </View>
+            )}
+            {!!profile.weightKg && !!profile.heightCm && (
+              <View style={[styles.statCard, { backgroundColor: '#fdf4ff' }]}>
+                <View style={[styles.statIcon, { backgroundColor: '#f3e8ff' }]}>
+                  <Ionicons
+                    name="analytics-outline"
+                    size={17}
+                    color="#a855f7"
+                  />
+                </View>
+                <Text style={styles.statValue}>
+                  {(
+                    profile.weightKg / Math.pow(profile.heightCm / 100, 2)
+                  ).toFixed(1)}
+                </Text>
+                <Text style={styles.statLabel}>IMC</Text>
+              </View>
+            )}
+            {!!profile.goal && (
+              <View style={[styles.statCard, { backgroundColor: '#fff7ed' }]}>
+                <View style={[styles.statIcon, { backgroundColor: '#ffedd5' }]}>
+                  <Ionicons name="flag-outline" size={17} color="#f97316" />
+                </View>
+                <Text style={styles.statValue} numberOfLines={1}>
+                  {GOAL_LABEL[profile.goal]?.split(' ')[0] ?? '—'}
+                </Text>
+                <Text style={styles.statLabel}>Objetivo</Text>
+              </View>
+            )}
+            {!!profile.activityLevel && (
+              <View style={[styles.statCard, { backgroundColor: '#fefce8' }]}>
+                <View style={[styles.statIcon, { backgroundColor: '#fef08a' }]}>
+                  <Ionicons name="walk-outline" size={17} color="#ca8a04" />
+                </View>
+                <Text style={styles.statValue} numberOfLines={1}>
+                  {ACTIVITY_LABEL[profile.activityLevel] ?? '—'}
+                </Text>
+                <Text style={styles.statLabel}>Atividade</Text>
+              </View>
+            )}
+          </ScrollView>
+        )}
+        {loading && (
+          <ActivityIndicator color="#16a34a" style={{ marginVertical: 16 }} />
+        )}
+
+        {/* ── Feature cards ─────────────────────────── */}
+        <Text style={styles.sectionTitle}>Acesso rápido</Text>
+        <View style={styles.featureGrid}>
+          {/* Chat — large */}
+          <TouchableOpacity
+            style={styles.featureLarge}
+            activeOpacity={0.85}
+            onPress={() => tabNav.navigate('Chat')}
+          >
+            <LinearGradient
+              colors={['#16a34a', '#059669']}
+              style={styles.featureGrad}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+            >
+              <View style={styles.featureDeco} />
+              <View style={styles.featureIconWrap}>
+                <Ionicons name="chatbubble-ellipses" size={28} color="#fff" />
+              </View>
+              <Text style={styles.featureTitle}>Chat</Text>
+              <Text style={styles.featureSub}>Fale com a nutricionista</Text>
+            </LinearGradient>
+          </TouchableOpacity>
+
+          {/* IA Nutri — large */}
+          <TouchableOpacity
+            style={styles.featureLarge}
+            activeOpacity={0.85}
+            onPress={() => tabNav.navigate('Glp1')}
+          >
+            <LinearGradient
+              colors={['#f59e0b', '#d97706']}
+              style={styles.featureGrad}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+            >
+              <View style={styles.featureDeco} />
+              <View style={styles.featureIconWrap}>
+                <Ionicons name="flash" size={28} color="#fff" />
+              </View>
+              <Text style={styles.featureTitle}>IA Nutri</Text>
+              <Text style={styles.featureSub}>Dúvidas com GLP-1</Text>
+            </LinearGradient>
+          </TouchableOpacity>
+
+          {/* Materiais — small */}
+          <TouchableOpacity
+            style={styles.featureSmall}
+            activeOpacity={0.85}
+            onPress={() => tabNav.navigate('Materials')}
+          >
+            <LinearGradient
+              colors={['#0ea5e9', '#0284c7']}
+              style={styles.featureGradSm}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+            >
+              <View style={styles.featureIconWrapSm}>
+                <Ionicons name="library" size={22} color="#fff" />
+              </View>
+              <Text style={styles.featureTitleSm}>Materiais</Text>
+            </LinearGradient>
+          </TouchableOpacity>
+
+          {/* Consultas — small */}
+          <TouchableOpacity
+            style={styles.featureSmall}
+            activeOpacity={0.85}
+            onPress={() => tabNav.navigate('Consultation')}
+          >
+            <LinearGradient
+              colors={['#8b5cf6', '#7c3aed']}
+              style={styles.featureGradSm}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+            >
+              <View style={styles.featureIconWrapSm}>
+                <Ionicons name="calendar" size={22} color="#fff" />
+              </View>
+              <Text style={styles.featureTitleSm}>Consultas</Text>
+            </LinearGradient>
           </TouchableOpacity>
         </View>
 
-        {/* Medicamento badge */}
-        {profile?.glp1Medication && (
-          <View style={styles.medBadge}>
-            <Ionicons name="medical" size={13} color="#16a34a" />
-            <Text style={styles.medText}>{profile.glp1Medication}</Text>
+        {/* ── Email alert ───────────────────────────── */}
+        {user && !user.emailVerified && (
+          <View style={styles.alertCard}>
+            <Ionicons name="mail-unread" size={20} color="#92400e" />
+            <View style={{ flex: 1 }}>
+              <Text style={styles.alertTitle}>Confirme seu e-mail</Text>
+              <Text style={styles.alertSub}>
+                Verifique sua caixa de entrada para ativar sua conta.
+              </Text>
+            </View>
           </View>
         )}
-      </LinearGradient>
 
-      {/* Quick actions */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Acesso rápido</Text>
-        <View style={styles.actionsGrid}>
-          {QUICK_ACTIONS.map(action => (
-            <TouchableOpacity
-              key={action.label}
-              style={styles.actionCard}
-              activeOpacity={0.8}
-              onPress={() => navigation.navigate(action.route)}
-            >
-              <View
-                style={[
-                  styles.actionIcon,
-                  { backgroundColor: action.color + '18' },
-                ]}
-              >
-                <Ionicons
-                  name={action.icon as any}
-                  size={26}
-                  color={action.color}
-                />
-              </View>
-              <Text style={styles.actionLabel}>{action.label}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-      </View>
-
-      {/* Info cards */}
-      {loading ? (
-        <ActivityIndicator color="#16a34a" style={{ marginTop: 20 }} />
-      ) : (
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Seu perfil</Text>
-          <View style={styles.infoGrid}>
-            <View style={styles.infoCard}>
-              <Ionicons name="flag" size={18} color="#16a34a" />
-              <Text style={styles.infoLabel}>Objetivo</Text>
-              <Text style={styles.infoValue}>
-                {profile?.goal
-                  ? GOAL_LABEL[profile.goal] ?? '—'
-                  : 'Não informado'}
-              </Text>
-            </View>
-            <View style={styles.infoCard}>
-              <Ionicons name="scale" size={18} color="#0ea5e9" />
-              <Text style={styles.infoLabel}>Peso atual</Text>
-              <Text style={styles.infoValue}>
-                {profile?.weightKg ? `${profile.weightKg} kg` : 'Não informado'}
-              </Text>
-            </View>
-            <View style={styles.infoCard}>
-              <Ionicons name="resize" size={18} color="#8b5cf6" />
-              <Text style={styles.infoLabel}>Altura</Text>
-              <Text style={styles.infoValue}>
-                {profile?.heightCm ? `${profile.heightCm} cm` : 'Não informado'}
-              </Text>
-            </View>
-            <View style={styles.infoCard}>
-              <Ionicons name="walk" size={18} color="#f59e0b" />
-              <Text style={styles.infoLabel}>Atividade</Text>
-              <Text style={styles.infoValue}>
-                {profile?.activityLevel
-                  ? ACTIVITY_LABEL[profile.activityLevel] ?? '—'
-                  : 'Não informado'}
-              </Text>
+        {/* ── Nutri card ────────────────────────────── */}
+        <TouchableOpacity
+          style={styles.nutriCard}
+          activeOpacity={0.85}
+          onPress={() => tabNav.navigate('Chat')}
+        >
+          <Image source={NUTRI_AVATAR} style={styles.nutriAvatar} />
+          <View style={styles.nutriInfo}>
+            <Text style={styles.nutriName}>Elane Oliveira</Text>
+            <Text style={styles.nutriCrn}>Nutricionista · CRN-14533</Text>
+            <View style={styles.nutriOnline}>
+              <View style={styles.nutriDot} />
+              <Text style={styles.nutriOnlineText}>Disponível</Text>
             </View>
           </View>
-          {profile?.dietType && (
-            <View style={styles.infoRow}>
-              <Ionicons name="leaf" size={15} color="#16a34a" />
-              <Text style={styles.infoRowLabel}>Alimentação:</Text>
-              <Text style={styles.infoRowValue}>
-                {DIET_LABEL[profile.dietType] ?? profile.dietType}
-              </Text>
-            </View>
-          )}
-          {profile?.occupation && (
-            <View style={styles.infoRow}>
-              <Ionicons name="briefcase" size={15} color="#6b7280" />
-              <Text style={styles.infoRowLabel}>Ocupação:</Text>
-              <Text style={styles.infoRowValue}>{profile.occupation}</Text>
-            </View>
-          )}
-        </View>
-      )}
-
-      {/* CTA verificação de e-mail */}
-      {user && !user.emailVerified && (
-        <View style={styles.alertCard}>
-          <Ionicons name="mail-unread" size={20} color="#92400e" />
-          <View style={{ flex: 1 }}>
-            <Text style={styles.alertTitle}>Confirme seu e-mail</Text>
-            <Text style={styles.alertSub}>
-              Verifique sua caixa de entrada para ativar sua conta.
-            </Text>
+          <View style={styles.nutriCta}>
+            <Text style={styles.nutriCtaText}>Conversar</Text>
+            <Ionicons name="chevron-forward" size={16} color="#16a34a" />
           </View>
-        </View>
-      )}
-
-      {/* Rodapé nutricionista */}
-      <View style={styles.nutri}>
-        <View style={styles.nutriAvatar}>
-          <Text style={styles.nutriAvatarText}>E</Text>
-        </View>
-        <View>
-          <Text style={styles.nutriName}>Elane Oliveira</Text>
-          <Text style={styles.nutriCrn}>Nutricionista · CRN-14533</Text>
-        </View>
-      </View>
-    </ScrollView>
+        </TouchableOpacity>
+      </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: '#f9fafb' },
-  content: { paddingBottom: 40 },
+  root: { flex: 1, backgroundColor: '#f8fafc' },
+  content: { paddingBottom: 110, paddingTop: 8 },
 
-  header: {
-    paddingTop: 56,
-    paddingBottom: 28,
-    paddingHorizontal: 24,
-    borderBottomLeftRadius: 28,
-    borderBottomRightRadius: 28,
+  /* Hero card */
+  heroCard: {
+    marginHorizontal: 20,
+    marginBottom: 20,
+    borderRadius: 24,
+    overflow: 'hidden',
+    elevation: 6,
+    shadowColor: '#16a34a',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.25,
+    shadowRadius: 16,
   },
-  headerTop: {
+  heroGrad: { padding: 24, overflow: 'hidden' },
+  heroDeco1: {
+    position: 'absolute',
+    width: 160,
+    height: 160,
+    borderRadius: 80,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    top: -50,
+    right: -30,
+  },
+  heroDeco2: {
+    position: 'absolute',
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    bottom: -20,
+    right: 80,
+  },
+  heroBody: {
     flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
   },
-  headerGreet: {
-    fontSize: 24,
-    fontWeight: '800',
-    color: '#fff',
-    marginBottom: 2,
-  },
-  headerSub: { fontSize: 14, color: 'rgba(255,255,255,0.75)' },
-  logoutBtn: {
-    width: 38,
-    height: 38,
-    borderRadius: 12,
-    backgroundColor: 'rgba(255,255,255,0.15)',
+  heroLeft: { flexDirection: 'row', alignItems: 'center', gap: 14 },
+  heroIconWrap: {
+    width: 52,
+    height: 52,
+    borderRadius: 18,
+    backgroundColor: 'rgba(255,255,255,0.2)',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  medBadge: {
+  heroLabel: {
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.75)',
+    fontWeight: '500',
+  },
+  heroName: { fontSize: 22, fontWeight: '800', color: '#fff', marginTop: 2 },
+  heroPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    backgroundColor: '#fff',
-    alignSelf: 'flex-start',
+    gap: 4,
+    marginTop: 6,
+    backgroundColor: 'rgba(255,255,255,0.18)',
     borderRadius: 20,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    marginTop: 14,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    alignSelf: 'flex-start',
   },
-  medText: { fontSize: 12, fontWeight: '600', color: '#16a34a' },
+  heroPillText: {
+    fontSize: 11,
+    color: 'rgba(255,255,255,0.9)',
+    fontWeight: '600',
+  },
+  heroRight: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  heroCtaText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: 'rgba(255,255,255,0.9)',
+  },
 
-  section: { paddingHorizontal: 20, marginTop: 24 },
+  /* Stats row */
+  statsRow: {
+    paddingHorizontal: 20,
+    paddingBottom: 4,
+    gap: 10,
+    marginBottom: 4,
+  },
+  statCard: {
+    borderRadius: 18,
+    padding: 14,
+    alignItems: 'center',
+    gap: 4,
+    minWidth: 88,
+  },
+  statIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 2,
+  },
+  statValue: { fontSize: 15, fontWeight: '800', color: '#111827' },
+  statUnit: { fontSize: 11, fontWeight: '500', color: '#6b7280' },
+  statLabel: { fontSize: 11, color: '#9ca3af', fontWeight: '500' },
+
+  /* Section title */
   sectionTitle: {
     fontSize: 16,
     fontWeight: '700',
     color: '#111827',
+    marginHorizontal: 20,
     marginBottom: 14,
-  },
-
-  actionsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
-  actionCard: {
-    flex: 1,
-    minWidth: '42%',
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: 16,
-    alignItems: 'center',
-    gap: 8,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-  },
-  actionIcon: {
-    width: 52,
-    height: 52,
-    borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  actionLabel: { fontSize: 13, fontWeight: '600', color: '#374151' },
-
-  infoGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-  infoCard: {
-    width: '48%',
-    backgroundColor: '#fff',
-    borderRadius: 14,
-    padding: 14,
-    gap: 4,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-  },
-  infoLabel: {
-    fontSize: 12,
-    color: '#6b7280',
-    fontWeight: '500',
-    marginTop: 4,
-  },
-  infoValue: { fontSize: 15, fontWeight: '700', color: '#111827' },
-
-  infoRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    backgroundColor: '#f9fafb',
-    borderRadius: 10,
     marginTop: 8,
   },
-  infoRowLabel: { fontSize: 13, color: '#6b7280' },
-  infoRowValue: { fontSize: 13, fontWeight: '600', color: '#111827', flex: 1 },
 
+  /* Feature grid */
+  featureGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    paddingHorizontal: 20,
+    justifyContent: 'space-between',
+    marginBottom: 24,
+  },
+  featureLarge: {
+    width: '48%',
+    marginBottom: 16,
+    borderRadius: 22,
+    overflow: 'hidden',
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.12,
+    shadowRadius: 12,
+  },
+  featureGrad: {
+    padding: 20,
+    minHeight: 150,
+    justifyContent: 'flex-end',
+    overflow: 'hidden',
+  },
+  featureDeco: {
+    position: 'absolute',
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    top: -30,
+    right: -20,
+  },
+  featureIconWrap: {
+    width: 50,
+    height: 50,
+    borderRadius: 16,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 10,
+  },
+  featureTitle: { fontSize: 16, fontWeight: '800', color: '#fff' },
+  featureSub: {
+    fontSize: 11,
+    color: 'rgba(255,255,255,0.75)',
+    marginTop: 2,
+    fontWeight: '500',
+  },
+  featureSmall: {
+    width: '48%',
+    marginBottom: 16,
+    borderRadius: 22,
+    overflow: 'hidden',
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.12,
+    shadowRadius: 12,
+  },
+  featureGradSm: {
+    padding: 18,
+    minHeight: 110,
+    justifyContent: 'flex-end',
+  },
+  featureIconWrapSm: {
+    width: 42,
+    height: 42,
+    borderRadius: 14,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 8,
+  },
+  featureTitleSm: { fontSize: 14, fontWeight: '800', color: '#fff' },
+
+  /* Alert */
   alertCard: {
     flexDirection: 'row',
     alignItems: 'flex-start',
@@ -364,38 +565,51 @@ const styles = StyleSheet.create({
     backgroundColor: '#fffbeb',
     borderWidth: 1,
     borderColor: '#fde68a',
-    borderRadius: 14,
+    borderRadius: 16,
     padding: 16,
     marginHorizontal: 20,
-    marginTop: 20,
+    marginBottom: 20,
   },
   alertTitle: { fontSize: 13, fontWeight: '700', color: '#92400e' },
   alertSub: { fontSize: 12, color: '#a16207', marginTop: 2, lineHeight: 18 },
 
-  nutri: {
+  /* Nutri card */
+  nutriCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: 14,
     backgroundColor: '#fff',
-    borderRadius: 16,
+    borderRadius: 20,
     marginHorizontal: 20,
-    marginTop: 24,
     padding: 16,
-    elevation: 2,
+    elevation: 3,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
   },
   nutriAvatar: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: '#16a34a',
-    alignItems: 'center',
-    justifyContent: 'center',
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    overflow: 'hidden',
   },
-  nutriAvatarText: { color: '#fff', fontWeight: '700', fontSize: 18 },
-  nutriName: { fontSize: 14, fontWeight: '700', color: '#111827' },
-  nutriCrn: { fontSize: 12, color: '#6b7280' },
+  nutriInfo: { flex: 1 },
+  nutriName: { fontSize: 15, fontWeight: '700', color: '#111827' },
+  nutriCrn: { fontSize: 12, color: '#6b7280', marginTop: 1 },
+  nutriOnline: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    marginTop: 5,
+  },
+  nutriDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#22c55e',
+  },
+  nutriOnlineText: { fontSize: 12, color: '#22c55e', fontWeight: '600' },
+  nutriCta: { flexDirection: 'row', alignItems: 'center', gap: 2 },
+  nutriCtaText: { fontSize: 13, fontWeight: '700', color: '#16a34a' },
 });

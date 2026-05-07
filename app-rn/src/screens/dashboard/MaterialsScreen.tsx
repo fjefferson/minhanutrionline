@@ -2,7 +2,9 @@ import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Dimensions,
   FlatList,
+  Image,
   Linking,
   Platform,
   ScrollView,
@@ -14,8 +16,24 @@ import {
 } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { LinearGradient } from 'react-native-linear-gradient';
+import YoutubePlayer from 'react-native-youtube-iframe';
 import api from '../../lib/api';
 import { useAuthStore } from '../../store/auth.store';
+
+const SCREEN_WIDTH = Dimensions.get('window').width;
+
+/** Extrai o ID de vídeo de qualquer URL do YouTube */
+function extractYouTubeId(url: string): string | null {
+  const patterns = [
+    /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([\w-]{11})/,
+    /youtube\.com\/shorts\/([\w-]{11})/,
+  ];
+  for (const re of patterns) {
+    const m = url.match(re);
+    if (m) return m[1];
+  }
+  return null;
+}
 
 /* ─── Types ─────────────────────────────────────────────── */
 interface Category {
@@ -268,20 +286,17 @@ export default function MaterialsScreen() {
     return (
       <View style={styles.root}>
         {/* Header */}
-        <LinearGradient
-          colors={['#16a34a', '#15803d']}
-          style={styles.detailHeader}
-        >
+        <View style={styles.detailHeader}>
           <TouchableOpacity
             style={styles.backBtn}
             onPress={() => setView('list')}
             activeOpacity={0.8}
           >
-            <Ionicons name="arrow-back" size={20} color="#fff" />
+            <Ionicons name="arrow-back" size={22} color="#111827" />
           </TouchableOpacity>
           <View style={styles.detailHeaderContent}>
             <View
-              style={[styles.typeBadge, { backgroundColor: cfg.color + '33' }]}
+              style={[styles.typeBadge, { backgroundColor: cfg.color + '15' }]}
             >
               <Ionicons name={cfg.icon as any} size={13} color={cfg.color} />
               <Text style={[styles.typeBadgeText, { color: cfg.color }]}>
@@ -292,7 +307,7 @@ export default function MaterialsScreen() {
               <View
                 style={[
                   styles.catBadge,
-                  { backgroundColor: detail.category.color + '33' },
+                  { backgroundColor: detail.category.color + '15' },
                 ]}
               >
                 <Text
@@ -308,7 +323,7 @@ export default function MaterialsScreen() {
             )}
           </View>
           <Text style={styles.detailTitle}>{detail.title}</Text>
-        </LinearGradient>
+        </View>
 
         <ScrollView
           style={{ flex: 1 }}
@@ -345,20 +360,43 @@ export default function MaterialsScreen() {
                 )}
               </View>
 
+              {/* YouTube player inline */}
+              {detail.type === 'VIDEO' &&
+                (() => {
+                  const ytId = extractYouTubeId(detail.url);
+                  if (ytId) {
+                    const playerW = SCREEN_WIDTH - 32;
+                    const playerH = Math.round((playerW * 9) / 16);
+                    return (
+                      <View style={[styles.ytWrapper, { height: playerH }]}>
+                        <YoutubePlayer
+                          videoId={ytId}
+                          height={playerH}
+                          width={playerW}
+                          play={false}
+                        />
+                      </View>
+                    );
+                  }
+                  return null;
+                })()}
+
               {/* Description */}
               {detail.description && (
                 <Text style={styles.detailDesc}>{detail.description}</Text>
               )}
 
-              {/* CTA button */}
-              <TouchableOpacity
-                style={styles.openBtn}
-                onPress={handleOpenUrl}
-                activeOpacity={0.85}
-              >
-                <Ionicons name="open-outline" size={18} color="#fff" />
-                <Text style={styles.openBtnText}>{cfg.actionLabel}</Text>
-              </TouchableOpacity>
+              {/* CTA button — abre no YouTube apenas se não for vídeo YT (já tocando inline) */}
+              {!(detail.type === 'VIDEO' && extractYouTubeId(detail.url)) && (
+                <TouchableOpacity
+                  style={styles.openBtn}
+                  onPress={handleOpenUrl}
+                  activeOpacity={0.85}
+                >
+                  <Ionicons name="open-outline" size={18} color="#fff" />
+                  <Text style={styles.openBtnText}>{cfg.actionLabel}</Text>
+                </TouchableOpacity>
+              )}
 
               {/* Reaction */}
               <View style={styles.reactionRow}>
@@ -434,11 +472,18 @@ export default function MaterialsScreen() {
 
                 {/* Input */}
                 <View style={styles.commentInputRow}>
-                  <View style={styles.commentAvatar}>
-                    <Text style={styles.commentAvatarText}>
-                      {getInitials(user?.name ?? '?')}
-                    </Text>
-                  </View>
+                  {user?.avatarUrl ? (
+                    <Image
+                      source={{ uri: user.avatarUrl }}
+                      style={styles.commentAvatar}
+                    />
+                  ) : (
+                    <View style={styles.commentAvatar}>
+                      <Text style={styles.commentAvatarText}>
+                        {getInitials(user?.name ?? '?')}
+                      </Text>
+                    </View>
+                  )}
                   <TextInput
                     style={styles.commentInput}
                     value={commentText}
@@ -474,11 +519,18 @@ export default function MaterialsScreen() {
                 ) : (
                   comments.map(c => (
                     <View key={c.id} style={styles.commentCard}>
-                      <View style={styles.commentCardAvatar}>
-                        <Text style={styles.commentCardAvatarText}>
-                          {getInitials(c.user.name)}
-                        </Text>
-                      </View>
+                      {c.user.avatarUrl ? (
+                        <Image
+                          source={{ uri: c.user.avatarUrl }}
+                          style={styles.commentCardAvatar}
+                        />
+                      ) : (
+                        <View style={styles.commentCardAvatar}>
+                          <Text style={styles.commentCardAvatarText}>
+                            {getInitials(c.user.name)}
+                          </Text>
+                        </View>
+                      )}
                       <View style={{ flex: 1 }}>
                         <View style={styles.commentCardHeader}>
                           <Text style={styles.commentCardName}>
@@ -523,12 +575,12 @@ export default function MaterialsScreen() {
   return (
     <View style={styles.root}>
       {/* Header */}
-      <LinearGradient colors={['#16a34a', '#15803d']} style={styles.listHeader}>
+      <View style={styles.listHeader}>
         <Text style={styles.listHeaderTitle}>Materiais de Apoio</Text>
         <Text style={styles.listHeaderSub}>
           Guias, PDFs e vídeos para sua jornada
         </Text>
-      </LinearGradient>
+      </View>
 
       {/* Search */}
       <View style={styles.searchWrap}>
@@ -745,15 +797,21 @@ const styles = StyleSheet.create({
 
   // List header
   listHeader: {
-    paddingTop: Platform.OS === 'ios' ? 56 : 44,
-    paddingBottom: 20,
-    paddingHorizontal: 20,
+    paddingTop: Platform.OS === 'ios' ? 60 : 40,
+    paddingBottom: 24,
+    paddingHorizontal: 24,
+    backgroundColor: '#f9fafb',
   },
-  listHeaderTitle: { fontSize: 22, fontWeight: '800', color: '#fff' },
+  listHeaderTitle: {
+    fontSize: 26,
+    fontWeight: '800',
+    color: '#111827',
+    letterSpacing: -0.5,
+  },
   listHeaderSub: {
-    fontSize: 13,
-    color: 'rgba(255,255,255,0.75)',
-    marginTop: 2,
+    fontSize: 16,
+    color: '#6b7280',
+    marginTop: 4,
   },
 
   // Search
@@ -761,10 +819,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#f3f4f6',
     borderRadius: 14,
-    marginHorizontal: 16,
-    marginTop: -16,
-    marginBottom: 4,
+    marginHorizontal: 24,
+    marginBottom: 16,
     paddingHorizontal: 14,
     paddingVertical: 10,
     elevation: 4,
@@ -802,7 +861,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
 
-  listContent: { paddingBottom: 40 },
+  listContent: { paddingBottom: 110 },
 
   // Card
   card: {
@@ -878,15 +937,12 @@ const styles = StyleSheet.create({
     paddingTop: Platform.OS === 'ios' ? 56 : 44,
     paddingBottom: 24,
     paddingHorizontal: 20,
+    backgroundColor: '#f9fafb',
   },
   backBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 12,
+    padding: 4,
+    marginBottom: 8,
+    alignSelf: 'flex-start',
   },
   detailHeaderContent: { flexDirection: 'row', gap: 8, marginBottom: 10 },
   typeBadge: {
@@ -905,17 +961,26 @@ const styles = StyleSheet.create({
   },
   catBadgeText: { fontSize: 12, fontWeight: '700' },
   detailTitle: {
-    fontSize: 20,
+    fontSize: 26,
     fontWeight: '800',
-    color: '#fff',
-    lineHeight: 28,
+    color: '#111827',
+    lineHeight: 32,
+    letterSpacing: -0.5,
   },
 
-  detailScroll: { padding: 20, paddingBottom: 48 },
+  detailScroll: { padding: 20, paddingBottom: 110 },
 
   statsRow: { flexDirection: 'row', gap: 16, marginBottom: 16 },
   statItem: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   statText: { fontSize: 12, color: '#9ca3af' },
+
+  ytWrapper: {
+    width: SCREEN_WIDTH - 32,
+    borderRadius: 12,
+    overflow: 'hidden',
+    marginBottom: 20,
+    backgroundColor: '#000',
+  },
 
   detailDesc: {
     fontSize: 14,
@@ -925,16 +990,26 @@ const styles = StyleSheet.create({
   },
 
   openBtn: {
+    backgroundColor: '#2563EB', // Royal Blue
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
-    backgroundColor: '#16a34a',
-    borderRadius: 14,
-    paddingVertical: 15,
+    borderRadius: 100, // Pílula perfeita
+    paddingVertical: 14,
     marginBottom: 24,
+    gap: 8,
+    elevation: 6,
+    shadowColor: '#2563EB',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.25,
+    shadowRadius: 16,
   },
-  openBtnText: { color: '#fff', fontWeight: '700', fontSize: 15 },
+  openBtnText: {
+    color: '#fff',
+    fontSize: 17,
+    fontWeight: '700',
+    letterSpacing: 0.3,
+  },
 
   // Reaction
   reactionRow: {
@@ -1000,6 +1075,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#16a34a',
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
   },
   commentAvatarText: { fontSize: 12, fontWeight: '800', color: '#fff' },
   commentInput: {
@@ -1043,6 +1119,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#e5e7eb',
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
   },
   commentCardAvatarText: { fontSize: 11, fontWeight: '800', color: '#6b7280' },
   commentCardHeader: {

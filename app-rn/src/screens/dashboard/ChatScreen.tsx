@@ -1,10 +1,13 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+const NUTRI_AVATAR = require('../../assets/images/avatar_atendimento_elane_oliveira_nutri.jpg');
 import {
   ActivityIndicator,
   Alert,
   FlatList,
   Image,
+  Keyboard,
   KeyboardAvoidingView,
+  Linking,
   Platform,
   StyleSheet,
   Text,
@@ -14,8 +17,16 @@ import {
 } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { LinearGradient } from 'react-native-linear-gradient';
+import { launchImageLibrary, type Asset } from 'react-native-image-picker';
+import {
+  pick,
+  types,
+  isErrorWithCode,
+  errorCodes,
+} from '@react-native-documents/picker';
 import api from '../../lib/api';
 import { useAuthStore } from '../../store/auth.store';
+import PlanLock from '../../components/PlanLock';
 
 /* ─── Types ────────────────────────────────────────────────── */
 interface Message {
@@ -62,7 +73,8 @@ function formatDateHeader(dateStr: string) {
 
 /* ─── Main Screen ────────────────────────────────────────────── */
 export default function ChatScreen() {
-  const { user } = useAuthStore();
+  const { user, planType } = useAuthStore();
+  const plan = planType();
 
   const [sessions, setSessions] = useState<Session[]>([]);
   const [activeSession, setActiveSession] = useState<Session | null>(null);
@@ -71,8 +83,31 @@ export default function ChatScreen() {
   const [sending, setSending] = useState(false);
   const [text, setText] = useState('');
   const [view, setView] = useState<'list' | 'chat'>('list');
-  // Plan guard
-  const [planType, setPlanType] = useState<string | null>(null);
+  // File attachment
+  type PickedFile = {
+    uri: string;
+    name: string;
+    type: string;
+    isImage: boolean;
+  };
+  const [pickedFile, setPickedFile] = useState<PickedFile | null>(null);
+
+  const [keyboardShown, setKeyboardShown] = useState(false);
+  useEffect(() => {
+    const s = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
+      () => setKeyboardShown(true),
+    );
+    const h = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
+      () => setKeyboardShown(false),
+    );
+    return () => {
+      s.remove();
+      h.remove();
+    };
+  }, []);
+
   // Rating
   const [ratingValue, setRatingValue] = useState(0);
   const [ratingComment, setRatingComment] = useState('');
@@ -83,15 +118,8 @@ export default function ChatScreen() {
 
   const loadSessions = useCallback(async () => {
     try {
-      const [sessionsRes, subRes] = await Promise.all([
-        api.get<Session[]>('/chat/sessions'),
-        api
-          .get<{ plan?: { type: string } } | null>('/subscriptions/me')
-          .catch(() => ({ data: null })),
-      ]);
+      const sessionsRes = await api.get<Session[]>('/chat/sessions');
       setSessions(sessionsRes.data);
-      const type = (subRes as any)?.data?.plan?.type ?? null;
-      setPlanType(type);
     } catch {
       /* silencioso */
     } finally {
@@ -146,24 +174,75 @@ export default function ChatScreen() {
         ...prev.map(s => ({ ...s, status: 'CLOSED' as const })),
       ]);
       setMessages([]);
+      setPickedFile(null);
       await openSession(newSession);
     } catch {
       Alert.alert('Erro', 'Não foi possível iniciar uma nova conversa.');
     }
   };
 
+  const pickImage = async () => {
+    try {
+      const result = await launchImageLibrary({
+        mediaType: 'mixed',
+        quality: 0.8,
+      });
+      const asset: Asset | undefined = result.assets?.[0];
+      if (!asset || !asset.uri) return;
+      setPickedFile({
+        uri: asset.uri,
+        name: asset.fileName ?? `imagem_${Date.now()}.jpg`,
+        type: asset.type ?? 'image/jpeg',
+        isImage: true,
+      });
+    } catch {
+      /* cancelado */
+    }
+  };
+
+  const pickDocument = async () => {
+    try {
+      const [result] = await pick({
+        type: [types.pdf, types.doc, types.docx, types.plainText, types.images],
+        copyTo: 'cachesDirectory',
+      });
+      if (!result.uri) return;
+      const isImage = result.type?.startsWith('image/') ?? false;
+      setPickedFile({
+        uri: result.localCopyUri ?? result.uri,
+        name: result.name ?? `arquivo_${Date.now()}`,
+        type: result.type ?? 'application/octet-stream',
+        isImage,
+      });
+    } catch (err: any) {
+      if (isErrorWithCode(err) && err.code === errorCodes.OPERATION_CANCELED)
+        return;
+      Alert.alert('Erro', 'Não foi possível selecionar o arquivo.');
+    }
+  };
+
+  const showAttachMenu = () => {
+    Alert.alert('Anexar arquivo', 'Escolha o tipo de arquivo', [
+      { text: 'Imagem / Vídeo', onPress: pickImage },
+      { text: 'Documento (PDF, Word…)', onPress: pickDocument },
+      { text: 'Cancelar', style: 'cancel' },
+    ]);
+  };
+
   const handleSend = async () => {
     const trimmed = text.trim();
-    if (!trimmed || !activeSession || sending) return;
+    if ((!trimmed && !pickedFile) || !activeSession || sending) return;
 
+    const fileToSend = pickedFile;
     setText('');
+    setPickedFile(null);
     setSending(true);
 
     const optimistic: Message = {
       id: `opt-${Date.now()}`,
       content: trimmed,
-      fileUrl: null,
-      fileType: null,
+      fileUrl: fileToSend ? fileToSend.uri : null,
+      fileType: fileToSend ? fileToSend.type : null,
       senderRole: 'USER',
       createdAt: new Date().toISOString(),
       readAt: null,
@@ -173,11 +252,17 @@ export default function ChatScreen() {
 
     try {
       const formData = new FormData();
-      formData.append('content', trimmed);
+      if (trimmed) formData.append('content', trimmed);
+      if (fileToSend) {
+        formData.append('file', {
+          uri: fileToSend.uri,
+          name: fileToSend.name,
+          type: fileToSend.type,
+        } as any);
+      }
       await api.post(`/chat/session/${activeSession.id}/messages`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
-      // Recarrega mensagens para pegar o id real
       const res = await api.get<Message[]>(
         `/chat/session/${activeSession.id}/messages`,
       );
@@ -232,35 +317,16 @@ export default function ChatScreen() {
   }
 
   /* ── PLAN GUARD ── */
-  const hasChat = planType === 'PLUS' || planType === 'PREMIUM';
+  const hasChat = plan === 'PLUS' || plan === 'PREMIUM';
 
   if (!loading && !hasChat) {
     return (
-      <View style={styles.root}>
-        <LinearGradient colors={['#16a34a', '#15803d']} style={styles.header}>
-          <Text style={styles.headerTitle}>Chat com a Nutri</Text>
-          <Text style={styles.headerSub}>Elane Oliveira • CRN-14533</Text>
-        </LinearGradient>
-        <View style={styles.upgradeBox}>
-          <Ionicons name="lock-closed" size={48} color="#d1fae5" />
-          <Text style={styles.upgradeTitle}>
-            Disponível nos planos Plus e Premium
-          </Text>
-          <Text style={styles.upgradeSub}>
-            {
-              'O chat direto com a nutricionista é exclusivo para assinantes Plus e Premium.\nFaça o upgrade do seu plano para desbloquear.'
-            }
-          </Text>
-          <View style={styles.upgradeBadges}>
-            <View style={styles.badge}>
-              <Text style={styles.badgeText}>Plus</Text>
-            </View>
-            <View style={[styles.badge, styles.badgePremium]}>
-              <Text style={styles.badgeText}>Premium</Text>
-            </View>
-          </View>
-        </View>
-      </View>
+      <PlanLock
+        icon="chatbubble-ellipses"
+        featureName="Chat com a Nutri"
+        description="O chat direto com a nutricionista é exclusivo para assinantes Plus e Premium. Faça o upgrade do seu plano para desbloquear."
+        requiredPlan="Plus ou Premium"
+      />
     );
   }
 
@@ -271,10 +337,10 @@ export default function ChatScreen() {
 
     return (
       <View style={styles.root}>
-        <LinearGradient colors={['#16a34a', '#15803d']} style={styles.header}>
+        <View style={styles.header}>
           <Text style={styles.headerTitle}>Chat com a Nutri</Text>
-          <Text style={styles.headerSub}>Elane Oliveira • CRN-14533</Text>
-        </LinearGradient>
+          <Text style={styles.headerSub}>Tire suas dúvidas por aqui</Text>
+        </View>
 
         {loading ? (
           <ActivityIndicator color="#16a34a" style={{ marginTop: 40 }} />
@@ -313,9 +379,7 @@ export default function ChatScreen() {
                   onPress={() => openSession(session)}
                   activeOpacity={0.85}
                 >
-                  <View style={styles.sessionAvatar}>
-                    <Ionicons name="person" size={20} color="#16a34a" />
-                  </View>
+                  <Image source={NUTRI_AVATAR} style={styles.sessionAvatar} />
                   <View style={styles.sessionInfo}>
                     <View style={styles.sessionRow}>
                       <Text style={styles.sessionTitle}>
@@ -389,9 +453,9 @@ export default function ChatScreen() {
       keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
     >
       {/* Header */}
-      <LinearGradient colors={['#16a34a', '#15803d']} style={styles.chatHeader}>
+      <View style={styles.chatHeader}>
         <TouchableOpacity onPress={goBack} style={styles.backBtn}>
-          <Ionicons name="arrow-back" size={22} color="#fff" />
+          <Ionicons name="arrow-back" size={22} color="#111827" />
         </TouchableOpacity>
         <View style={styles.chatHeaderInfo}>
           <Text style={styles.chatHeaderName}>Elane Oliveira</Text>
@@ -400,7 +464,7 @@ export default function ChatScreen() {
           </Text>
         </View>
         {!isClosed && <View style={styles.onlineDot} />}
-      </LinearGradient>
+      </View>
 
       {/* Messages */}
       <FlatList
@@ -421,6 +485,7 @@ export default function ChatScreen() {
           }
           const msg = item.msg;
           const isUser = msg.senderRole === 'USER';
+          const userInitial = user?.name?.[0]?.toUpperCase() ?? '?';
           return (
             <View
               style={[
@@ -429,9 +494,7 @@ export default function ChatScreen() {
               ]}
             >
               {!isUser && (
-                <View style={styles.msgAvatar}>
-                  <Ionicons name="person" size={14} color="#16a34a" />
-                </View>
+                <Image source={NUTRI_AVATAR} style={styles.msgAvatar} />
               )}
               <View
                 style={[
@@ -456,7 +519,11 @@ export default function ChatScreen() {
                     resizeMode="cover"
                   />
                 ) : msg.fileUrl ? (
-                  <View style={styles.fileAttachment}>
+                  <TouchableOpacity
+                    style={styles.fileAttachment}
+                    onPress={() => Linking.openURL(msg.fileUrl!)}
+                    activeOpacity={0.75}
+                  >
                     <Ionicons
                       name="document-outline"
                       size={16}
@@ -467,10 +534,18 @@ export default function ChatScreen() {
                         styles.fileAttachmentText,
                         isUser && { color: '#fff' },
                       ]}
+                      numberOfLines={1}
                     >
-                      Arquivo anexado
+                      {decodeURIComponent(
+                        msg.fileUrl.split('/').pop() ?? 'documento',
+                      )}
                     </Text>
-                  </View>
+                    <Ionicons
+                      name="open-outline"
+                      size={13}
+                      color={isUser ? 'rgba(255,255,255,0.7)' : '#9ca3af'}
+                    />
+                  </TouchableOpacity>
                 ) : null}
                 <Text
                   style={[
@@ -482,6 +557,17 @@ export default function ChatScreen() {
                   {isUser && msg.readAt ? '  ✓✓' : ''}
                 </Text>
               </View>
+              {isUser &&
+                (user?.avatarUrl ? (
+                  <Image
+                    source={{ uri: user.avatarUrl }}
+                    style={styles.msgAvatar}
+                  />
+                ) : (
+                  <View style={styles.msgAvatarFallback}>
+                    <Text style={styles.msgAvatarInitial}>{userInitial}</Text>
+                  </View>
+                ))}
             </View>
           );
         }}
@@ -513,30 +599,63 @@ export default function ChatScreen() {
 
       {/* Input */}
       {!isClosed && (
-        <View style={styles.inputBar}>
-          <TextInput
-            style={styles.input}
-            value={text}
-            onChangeText={setText}
-            placeholder="Digite uma mensagem..."
-            placeholderTextColor="#9ca3af"
-            multiline
-            maxLength={2000}
-          />
-          <TouchableOpacity
-            style={[
-              styles.sendBtn,
-              (!text.trim() || sending) && styles.sendBtnDisabled,
-            ]}
-            onPress={handleSend}
-            disabled={!text.trim() || sending}
-          >
-            {sending ? (
-              <ActivityIndicator color="#fff" size="small" />
-            ) : (
-              <Ionicons name="send" size={18} color="#fff" />
-            )}
-          </TouchableOpacity>
+        <View>
+          {/* Preview do arquivo selecionado */}
+          {pickedFile && (
+            <View style={styles.filePreviewBar}>
+              {pickedFile.isImage ? (
+                <Image
+                  source={{ uri: pickedFile.uri }}
+                  style={styles.filePreviewImg}
+                />
+              ) : (
+                <View style={styles.filePreviewDoc}>
+                  <Ionicons name="document-outline" size={20} color="#16a34a" />
+                </View>
+              )}
+              <Text style={styles.filePreviewName} numberOfLines={1}>
+                {pickedFile.name}
+              </Text>
+              <TouchableOpacity
+                onPress={() => setPickedFile(null)}
+                style={styles.filePreviewRemove}
+              >
+                <Ionicons name="close-circle" size={20} color="#ef4444" />
+              </TouchableOpacity>
+            </View>
+          )}
+          <View style={styles.inputBar}>
+            <TouchableOpacity style={styles.attachBtn} onPress={showAttachMenu}>
+              <Ionicons name="attach" size={22} color="#6b7280" />
+            </TouchableOpacity>
+            <TextInput
+              style={styles.input}
+              value={text}
+              onChangeText={setText}
+              placeholder="Digite uma mensagem..."
+              placeholderTextColor="#9ca3af"
+              multiline
+              maxLength={2000}
+            />
+            <TouchableOpacity
+              style={[
+                styles.sendBtn,
+                ((!text.trim() && !pickedFile) || sending) &&
+                  styles.sendBtnDisabled,
+              ]}
+              onPress={handleSend}
+              disabled={(!text.trim() && !pickedFile) || sending}
+            >
+              {sending ? (
+                <ActivityIndicator color="#fff" size="small" />
+              ) : (
+                <Ionicons name="send" size={18} color="#fff" />
+              )}
+            </TouchableOpacity>
+          </View>
+          {!keyboardShown && (
+            <View style={{ height: 94, backgroundColor: '#fff' }} />
+          )}
         </View>
       )}
     </KeyboardAvoidingView>
@@ -549,26 +668,42 @@ const styles = StyleSheet.create({
 
   // LIST
   header: {
-    paddingTop: 52,
-    paddingBottom: 20,
-    paddingHorizontal: 20,
-    borderBottomLeftRadius: 20,
-    borderBottomRightRadius: 20,
+    paddingTop: Platform.OS === 'ios' ? 60 : 40,
+    paddingBottom: 24,
+    paddingHorizontal: 24,
+    backgroundColor: '#f9fafb',
   },
-  headerTitle: { fontSize: 22, fontWeight: '800', color: '#fff', marginTop: 4 },
-  headerSub: { fontSize: 13, color: 'rgba(255,255,255,0.8)', marginTop: 4 },
-  listContent: { padding: 16, paddingBottom: 40 },
+  headerTitle: {
+    fontSize: 26,
+    fontWeight: '800',
+    color: '#111827',
+    letterSpacing: -0.5,
+  },
+  headerSub: { fontSize: 16, color: '#6b7280', marginTop: 4 },
+  listContent: { padding: 16, paddingBottom: 110 },
   newBtn: {
+    backgroundColor: '#2563EB', // Royal Blue
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
-    backgroundColor: '#16a34a',
-    borderRadius: 14,
+    alignSelf: 'flex-start',
+    paddingHorizontal: 24,
+    borderRadius: 100, // Pílula perfeita
     paddingVertical: 14,
     marginBottom: 20,
+    gap: 8,
+    shadowColor: '#2563EB',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.25,
+    shadowRadius: 16,
+    elevation: 6,
   },
-  newBtnText: { color: '#fff', fontWeight: '700', fontSize: 16 },
+  newBtnText: {
+    color: '#fff',
+    fontSize: 17,
+    fontWeight: '700',
+    letterSpacing: 0.3,
+  },
 
   // UPGRADE WALL
   upgradeBox: {
@@ -618,22 +753,21 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 12,
     backgroundColor: '#fff',
-    borderRadius: 14,
-    padding: 14,
-    marginBottom: 10,
-    elevation: 2,
+    borderRadius: 20, // Mais suave e redondo moderno
+    padding: 16,
+    marginBottom: 12,
+    elevation: 3,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.05,
-    shadowRadius: 6,
+    shadowRadius: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.02)',
   },
   sessionAvatar: {
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: '#dcfce7',
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   sessionInfo: { flex: 1 },
   sessionRow: {
@@ -654,17 +788,23 @@ const styles = StyleSheet.create({
 
   // CHAT
   chatHeader: {
-    paddingTop: 52,
-    paddingBottom: 14,
+    paddingTop: Platform.OS === 'ios' ? 60 : 40,
+    paddingBottom: 16,
     paddingHorizontal: 16,
+    backgroundColor: '#f9fafb',
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
   },
   backBtn: { padding: 4 },
   chatHeaderInfo: { flex: 1 },
-  chatHeaderName: { fontSize: 16, fontWeight: '700', color: '#fff' },
-  chatHeaderSub: { fontSize: 12, color: 'rgba(255,255,255,0.75)' },
+  chatHeaderName: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#111827',
+    letterSpacing: -0.3,
+  },
+  chatHeaderSub: { fontSize: 13, color: '#6b7280' },
   onlineDot: {
     width: 10,
     height: 10,
@@ -690,10 +830,16 @@ const styles = StyleSheet.create({
     width: 28,
     height: 28,
     borderRadius: 14,
+  },
+  msgAvatarFallback: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
     backgroundColor: '#dcfce7',
     alignItems: 'center',
     justifyContent: 'center',
   },
+  msgAvatarInitial: { fontSize: 12, fontWeight: '700', color: '#16a34a' },
   bubble: {
     maxWidth: '78%',
     borderRadius: 18,
@@ -701,7 +847,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
   },
   bubbleUser: {
-    backgroundColor: '#16a34a',
+    backgroundColor: '#2563EB', // Royal Blue do chat também
     borderBottomRightRadius: 4,
   },
   bubbleAdmin: {
@@ -751,13 +897,47 @@ const styles = StyleSheet.create({
   inputBar: {
     flexDirection: 'row',
     alignItems: 'flex-end',
-    gap: 10,
+    gap: 8,
     backgroundColor: '#fff',
     borderTopWidth: 1,
     borderTopColor: '#f3f4f6',
-    paddingHorizontal: 14,
+    paddingHorizontal: 10,
     paddingVertical: 10,
   },
+  attachBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#f3f4f6',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  filePreviewBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    backgroundColor: '#f0fdf4',
+    borderTopWidth: 1,
+    borderTopColor: '#dcfce7',
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+  },
+  filePreviewImg: { width: 44, height: 44, borderRadius: 8 },
+  filePreviewDoc: {
+    width: 44,
+    height: 44,
+    borderRadius: 8,
+    backgroundColor: '#dcfce7',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  filePreviewName: {
+    flex: 1,
+    fontSize: 12,
+    color: '#374151',
+    fontWeight: '500',
+  },
+  filePreviewRemove: { padding: 2 },
   input: {
     flex: 1,
     backgroundColor: '#f9fafb',
@@ -774,7 +954,7 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: '#16a34a',
+    backgroundColor: '#2563EB',
     alignItems: 'center',
     justifyContent: 'center',
   },

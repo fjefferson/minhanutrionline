@@ -4,6 +4,8 @@ export type RootStackParamList = {
   Register: undefined;
   Anamnesis: undefined;
   Main: undefined;
+  Plans: undefined;
+  Checkout: { planType: string };
 };
 
 export type AnamnesisStackParamList = {
@@ -19,5 +21,6 @@ export type MainTabParamList = {
   Glp1: undefined;
   Chat: undefined;
   Materials: undefined;
+  Consultation: undefined;
   Profile: undefined;
 };
