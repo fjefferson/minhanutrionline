@@ -45,7 +45,7 @@ const TABS = [
   },
   {
     name: 'Glp1' as const,
-    label: 'IA Nutri',
+    label: 'Guia GLP-1',
     icon: 'flash',
     iconOutline: 'flash-outline',
   },

@@ -300,7 +300,7 @@ function Glp1ScreenInner() {
     return (
       <View style={styles.root}>
         <View style={styles.header}>
-          <Text style={styles.headerTitle}>Orientação IA</Text>
+          <Text style={styles.headerTitle}>Assistente de Orientações</Text>
           <Text style={styles.headerSub}>
             Orientações sobre sintomas com GLP-1
           </Text>
@@ -671,7 +671,7 @@ function Glp1ScreenInner() {
           <Ionicons name="arrow-back" size={20} color="#111827" />
           <Text style={styles.backBtnText}>Voltar</Text>
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Orientação da IA</Text>
+        <Text style={styles.headerTitle}>Resultado - IA Nutri</Text>
         <Text style={styles.headerSub}>
           {result?.symptoms.map(s => s.symptom.name).join(', ')}
         </Text>
