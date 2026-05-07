@@ -11,6 +11,7 @@ import {
   View,
 } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
+import * as AddCalendarEvent from 'react-native-add-calendar-event';
 import api from '../../lib/api';
 import { useAuthStore } from '../../store/auth.store';
 import PlanLock from '../../components/PlanLock';
@@ -585,15 +586,6 @@ function ConsultationScreenInner() {
               </View>
             )}
 
-            <TouchableOpacity
-              style={styles.pillButton}
-              onPress={() => setView('calendar')}
-              activeOpacity={0.88}
-            >
-              <Text style={styles.pillButtonText}>Nova Consulta </Text>
-              <Ionicons name="add" size={22} color="#fff" />
-            </TouchableOpacity>
-
             {/* Próximas */}
             {upcoming.length > 0 && (
               <View style={styles.section}>
@@ -637,6 +629,16 @@ function ConsultationScreenInner() {
           </>
         )}
       </ScrollView>
+
+      {!loading && (
+        <TouchableOpacity
+          style={styles.fab}
+          onPress={() => setView('calendar')}
+          activeOpacity={0.9}
+        >
+          <Ionicons name="add" size={28} color="#fff" />
+        </TouchableOpacity>
+      )}
     </View>
   );
 }
@@ -655,6 +657,29 @@ function ConsultationCard({
     c.status !== 'CANCELLED' &&
     c.status !== 'COMPLETED' &&
     new Date(c.scheduledAt).getTime() - Date.now() > cancelDays * 86_400_000;
+
+  const handleAddToCalendar = () => {
+    const dt = new Date(c.scheduledAt);
+    const endDt = new Date(dt.getTime() + 60 * 60 * 1000); // assume 1 hora de consulta
+
+    const eventConfig = {
+      title: 'Consulta Nutricional - MinhaNutri',
+      startDate: dt.toISOString(),
+      endDate: endDt.toISOString(),
+      notes: c.meetingLink
+        ? `Link da videochamada: ${c.meetingLink}`
+        : 'Consulta com Elane Oliveira.',
+    };
+
+    AddCalendarEvent.presentEventCreatingDialog(eventConfig)
+      .then((eventInfo: any) => {
+        // Evento criado
+      })
+      .catch((error: any) => {
+        // user cancellou ou deu erro
+        console.warn(error);
+      });
+  };
 
   return (
     <View style={styles.card}>
@@ -694,16 +719,29 @@ function ConsultationCard({
         )}
       </View>
 
-      {c.meetingLink && (
-        <TouchableOpacity
-          style={styles.meetingLinkRow}
-          onPress={() => Linking.openURL(c.meetingLink!)}
-          activeOpacity={0.7}
-        >
-          <Ionicons name="videocam-outline" size={15} color="#16a34a" />
-          <Text style={styles.meetingLinkText}>Entrar na videochamada</Text>
-        </TouchableOpacity>
-      )}
+      <View style={styles.cardActionsRow}>
+        {c.meetingLink && (
+          <TouchableOpacity
+            style={styles.meetingLinkRow}
+            onPress={() => Linking.openURL(c.meetingLink!)}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="videocam-outline" size={15} color="#16a34a" />
+            <Text style={styles.meetingLinkText}>Entrar na videochamada</Text>
+          </TouchableOpacity>
+        )}
+
+        {c.status !== 'CANCELLED' && c.status !== 'COMPLETED' && (
+          <TouchableOpacity
+            style={styles.calendarBtn}
+            onPress={handleAddToCalendar}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="calendar" size={15} color="#2563eb" />
+            <Text style={styles.calendarBtnText}>Adicionar ao calendário</Text>
+          </TouchableOpacity>
+        )}
+      </View>
 
       {c.notes && (
         <View style={styles.notesRow}>
@@ -775,28 +813,22 @@ const styles = StyleSheet.create({
   },
   infoText: { flex: 1, fontSize: 13, color: '#1e40af', lineHeight: 18 },
 
-  // Schedule CTA
-  pillButton: {
+  // FAB
+  fab: {
+    position: 'absolute',
+    bottom: 114,
+    right: 20,
     backgroundColor: '#2563EB', // Royal Blue
-    flexDirection: 'row',
+    width: 56,
+    height: 56,
+    borderRadius: 28,
     alignItems: 'center',
     justifyContent: 'center',
-    alignSelf: 'flex-start',
-    paddingHorizontal: 24,
-    borderRadius: 100, // Pílula perfeita
-    paddingVertical: 14,
-    marginBottom: 24,
     shadowColor: '#2563EB',
     shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.25,
-    shadowRadius: 16,
-    elevation: 6,
-  },
-  pillButtonText: {
-    color: '#fff',
-    fontSize: 17,
-    fontWeight: '700',
-    letterSpacing: 0.3,
+    shadowOpacity: 0.35,
+    shadowRadius: 12,
+    elevation: 8,
   },
 
   scheduleCardDisabled: { opacity: 0.75, elevation: 1 },
@@ -871,16 +903,50 @@ const styles = StyleSheet.create({
   statusDot: { width: 7, height: 7, borderRadius: 4 },
   statusText: { fontSize: 12, fontWeight: '700' },
   cancelBtn: { paddingTop: 2 },
-  meetingLinkRow: {
+  cardActionsRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    justifyContent: 'flex-start',
+    gap: 8,
     marginTop: 10,
     paddingTop: 10,
     borderTopWidth: 1,
-    borderTopColor: '#f0fdf4',
+    borderTopColor: '#f3f4f6',
   },
-  meetingLinkText: { fontSize: 13, color: '#16a34a', fontWeight: '600' },
+  meetingLinkRow: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#f0fdf4',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    gap: 6,
+  },
+  meetingLinkText: {
+    fontSize: 13,
+    color: '#16a34a',
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  calendarBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#eff6ff',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    gap: 6,
+  },
+  calendarBtnText: {
+    fontSize: 13,
+    color: '#2563eb',
+    fontWeight: '600',
+    textAlign: 'center',
+  },
   notesRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',

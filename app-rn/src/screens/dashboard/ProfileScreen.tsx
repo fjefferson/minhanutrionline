@@ -147,8 +147,12 @@ function ChipGroup<T extends string>({
 }
 
 /* ─── Main Screen ────────────────────────────────────────── */
+type TabFlag = 'menu' | 'personalData' | 'accountSettings' | 'deleteAccount';
+
 export default function ProfileScreen() {
   const { user, logout, updateUser } = useAuthStore();
+  const [activeTab, setActiveTab] = useState<TabFlag>('menu');
+
   const [form, setForm] = useState<ProfileForm>(EMPTY_FORM);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -392,432 +396,528 @@ export default function ProfileScreen() {
     );
   }
 
+  const renderMenu = () => (
+    <ScrollView
+      contentContainerStyle={styles.scroll}
+      showsVerticalScrollIndicator={false}
+    >
+      <TouchableOpacity
+        style={styles.menuBtn}
+        onPress={() => setActiveTab('personalData')}
+      >
+        <View style={styles.menuIconWrap}>
+          <Ionicons name="document-text-outline" size={20} color="#2563EB" />
+        </View>
+        <View style={styles.menuTextWrap}>
+          <Text style={styles.menuTitle}>Dados do Perfil</Text>
+          <Text style={styles.menuSubtitle}>
+            Físicos, objetivos, saúde e dieta
+          </Text>
+        </View>
+        <Ionicons name="chevron-forward" size={20} color="#9ca3af" />
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={styles.menuBtn}
+        onPress={() => setActiveTab('accountSettings')}
+      >
+        <View style={styles.menuIconWrap}>
+          <Ionicons name="settings-outline" size={20} color="#2563EB" />
+        </View>
+        <View style={styles.menuTextWrap}>
+          <Text style={styles.menuTitle}>Configurações da Conta</Text>
+          <Text style={styles.menuSubtitle}>Senha e nome de acesso</Text>
+        </View>
+        <Ionicons name="chevron-forward" size={20} color="#9ca3af" />
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={[styles.menuBtn, styles.menuBtnDanger]}
+        onPress={() => setActiveTab('deleteAccount')}
+      >
+        <View style={[styles.menuIconWrap, styles.menuIconWrapDanger]}>
+          <Ionicons name="trash-outline" size={20} color="#dc2626" />
+        </View>
+        <View style={styles.menuTextWrap}>
+          <Text style={[styles.menuTitle, { color: '#dc2626' }]}>
+            Excluir Conta
+          </Text>
+          <Text style={styles.menuSubtitle}>Esta ação é irreversível</Text>
+        </View>
+        <Ionicons name="chevron-forward" size={20} color="#fca5a5" />
+      </TouchableOpacity>
+
+      {/* Logout on menu screen as well */}
+      <TouchableOpacity style={styles.logoutBtn} onPress={logout}>
+        <Ionicons name="log-out-outline" size={20} color="#4b5563" />
+        <Text style={styles.logoutBtnText}>Sair do Aplicativo</Text>
+      </TouchableOpacity>
+    </ScrollView>
+  );
+
+  const renderPersonalData = () => (
+    <ScrollView
+      contentContainerStyle={styles.scroll}
+      keyboardShouldPersistTaps="handled"
+      showsVerticalScrollIndicator={false}
+    >
+      <SectionHeader title="Dados físicos" />
+
+      <Label text="Gênero" />
+      <ChipGroup
+        options={GENDERS}
+        value={form.gender}
+        onSelect={v => setForm(p => ({ ...p, gender: v }))}
+      />
+
+      <Label text="Data de nascimento" />
+      <TextInput
+        style={styles.input}
+        value={form.birthDate}
+        onChangeText={v => set('birthDate')(maskDate(v))}
+        placeholder="DD/MM/AAAA"
+        placeholderTextColor="#9ca3af"
+        keyboardType="numeric"
+        maxLength={10}
+      />
+
+      <View style={styles.row}>
+        <View style={styles.half}>
+          <Label text="Altura (cm)" />
+          <TextInput
+            style={styles.input}
+            value={form.heightCm}
+            onChangeText={set('heightCm')}
+            placeholder="ex: 165"
+            placeholderTextColor="#9ca3af"
+            keyboardType="numeric"
+          />
+        </View>
+        <View style={styles.half}>
+          <Label text="Peso (kg)" />
+          <TextInput
+            style={styles.input}
+            value={form.weightKg}
+            onChangeText={set('weightKg')}
+            placeholder="ex: 70.5"
+            placeholderTextColor="#9ca3af"
+            keyboardType="decimal-pad"
+          />
+        </View>
+      </View>
+
+      <Label text="Ocupação" />
+      <TextInput
+        style={styles.input}
+        value={form.occupation}
+        onChangeText={set('occupation')}
+        placeholder="Ex: Analista, Professora..."
+        placeholderTextColor="#9ca3af"
+      />
+
+      {/* ── Objetivos e hábitos ── */}
+      <SectionHeader title="Objetivos e hábitos" />
+
+      <Label text="Objetivo" />
+      <ChipGroup
+        options={GOALS}
+        value={form.goal}
+        onSelect={v => setForm(p => ({ ...p, goal: v }))}
+      />
+
+      <Label text="Nível de atividade" />
+      <ChipGroup
+        options={ACTIVITIES}
+        value={form.activityLevel}
+        onSelect={v => setForm(p => ({ ...p, activityLevel: v }))}
+      />
+
+      <Label text="Tipo de alimentação" />
+      <ChipGroup
+        options={DIETS}
+        value={form.dietType}
+        onSelect={v => setForm(p => ({ ...p, dietType: v }))}
+      />
+
+      <Label text="Refeições por dia" />
+      <TextInput
+        style={styles.input}
+        value={form.mealFrequency}
+        onChangeText={set('mealFrequency')}
+        placeholder="ex: 5"
+        placeholderTextColor="#9ca3af"
+        keyboardType="numeric"
+      />
+
+      <Label text="Alimentos que não gosta" />
+      <TextInput
+        style={styles.inputMulti}
+        value={form.foodDislikes}
+        onChangeText={set('foodDislikes')}
+        placeholder="Ex: fígado, beterraba..."
+        placeholderTextColor="#9ca3af"
+        multiline
+        numberOfLines={3}
+        textAlignVertical="top"
+      />
+
+      {/* ── GLP-1 ── */}
+      <SectionHeader title="GLP-1" />
+
+      <Label text="Medicamento em uso" />
+      <TextInput
+        style={styles.input}
+        value={form.glp1Medication}
+        onChangeText={set('glp1Medication')}
+        placeholder="Ex: Ozempic, Wegovy..."
+        placeholderTextColor="#9ca3af"
+      />
+
+      <Label text="Data de início do medicamento" />
+      <TextInput
+        style={styles.input}
+        value={form.glp1StartDate}
+        onChangeText={v => set('glp1StartDate')(maskDate(v))}
+        placeholder="DD/MM/AAAA"
+        placeholderTextColor="#9ca3af"
+        keyboardType="numeric"
+        maxLength={10}
+      />
+
+      {/* ── Saúde ── */}
+      <SectionHeader title="Saúde" />
+
+      <Label text="Alergias alimentares" />
+      <TextInput
+        style={styles.inputMulti}
+        value={form.allergies}
+        onChangeText={set('allergies')}
+        placeholder="Ex: amendoim, frutos do mar..."
+        placeholderTextColor="#9ca3af"
+        multiline
+        numberOfLines={2}
+        textAlignVertical="top"
+      />
+
+      <Label text="Intolerâncias" />
+      <TextInput
+        style={styles.inputMulti}
+        value={form.intolerances}
+        onChangeText={set('intolerances')}
+        placeholder="Ex: lactose, glúten..."
+        placeholderTextColor="#9ca3af"
+        multiline
+        numberOfLines={2}
+        textAlignVertical="top"
+      />
+
+      <Label text="Condições médicas" />
+      <TextInput
+        style={styles.inputMulti}
+        value={form.medicalConditions}
+        onChangeText={set('medicalConditions')}
+        placeholder="Ex: diabetes tipo 2, hipertensão..."
+        placeholderTextColor="#9ca3af"
+        multiline
+        numberOfLines={2}
+        textAlignVertical="top"
+      />
+
+      <Label text="Outros medicamentos" />
+      <TextInput
+        style={styles.inputMulti}
+        value={form.otherMedications}
+        onChangeText={set('otherMedications')}
+        placeholder="Ex: metformina 500mg..."
+        placeholderTextColor="#9ca3af"
+        multiline
+        numberOfLines={2}
+        textAlignVertical="top"
+      />
+
+      {/* ── Salvar perfil ── */}
+      <TouchableOpacity
+        style={[styles.saveBtn, saving && styles.saveBtnDisabled]}
+        onPress={handleSave}
+        disabled={saving}
+      >
+        {saving ? (
+          <ActivityIndicator color="#fff" size="small" />
+        ) : saved ? (
+          <>
+            <Ionicons name="checkmark-circle" size={18} color="#fff" />
+            <Text style={styles.saveBtnText}>Salvo!</Text>
+          </>
+        ) : (
+          <Text style={styles.saveBtnText}>Salvar perfil</Text>
+        )}
+      </TouchableOpacity>
+      <View style={{ height: 32 }} />
+    </ScrollView>
+  );
+
+  const renderAccountSettings = () => (
+    <ScrollView
+      contentContainerStyle={styles.scroll}
+      keyboardShouldPersistTaps="handled"
+      showsVerticalScrollIndicator={false}
+    >
+      <SectionHeader title="Nome de Exibição" />
+
+      <View style={styles.accountCard}>
+        <View style={styles.accountCardHeader}>
+          <Ionicons name="person-outline" size={16} color="#16a34a" />
+          <Text style={styles.accountCardTitle}>Nome</Text>
+        </View>
+        <TextInput
+          style={[styles.input, { marginTop: 8 }]}
+          value={name}
+          onChangeText={setName}
+          placeholder="Seu nome completo"
+          placeholderTextColor="#9ca3af"
+        />
+        {nameMsg && (
+          <View
+            style={[
+              styles.inlineMsg,
+              nameMsg.ok ? styles.inlineMsgOk : styles.inlineMsgErr,
+            ]}
+          >
+            <Ionicons
+              name={nameMsg.ok ? 'checkmark-circle' : 'alert-circle'}
+              size={14}
+              color={nameMsg.ok ? '#15803d' : '#dc2626'}
+            />
+            <Text
+              style={
+                nameMsg.ok ? styles.inlineMsgTextOk : styles.inlineMsgTextErr
+              }
+            >
+              {nameMsg.text}
+            </Text>
+          </View>
+        )}
+        <TouchableOpacity
+          style={[styles.acctBtn, nameSaving && styles.saveBtnDisabled]}
+          onPress={handleNameSave}
+          disabled={nameSaving}
+        >
+          {nameSaving ? (
+            <ActivityIndicator color="#fff" size="small" />
+          ) : (
+            <Text style={styles.acctBtnText}>Salvar nome</Text>
+          )}
+        </TouchableOpacity>
+      </View>
+
+      <SectionHeader title="Segurança" />
+      <View style={styles.accountCard}>
+        <View style={styles.accountCardHeader}>
+          <Ionicons name="lock-closed-outline" size={16} color="#16a34a" />
+          <Text style={styles.accountCardTitle}>Alterar senha</Text>
+        </View>
+        <TextInput
+          style={[styles.input, { marginTop: 8 }]}
+          value={currentPw}
+          onChangeText={setCurrentPw}
+          placeholder="Senha atual"
+          placeholderTextColor="#9ca3af"
+          secureTextEntry
+          autoComplete="current-password"
+        />
+        <TextInput
+          style={[styles.input, { marginTop: 10 }]}
+          value={newPw}
+          onChangeText={setNewPw}
+          placeholder="Nova senha (mín. 6 caracteres)"
+          placeholderTextColor="#9ca3af"
+          secureTextEntry
+          autoComplete="new-password"
+        />
+        <TextInput
+          style={[styles.input, { marginTop: 10 }]}
+          value={confirmPw}
+          onChangeText={setConfirmPw}
+          placeholder="Confirmar nova senha"
+          placeholderTextColor="#9ca3af"
+          secureTextEntry
+          autoComplete="new-password"
+        />
+        {pwMsg && (
+          <View
+            style={[
+              styles.inlineMsg,
+              pwMsg.ok ? styles.inlineMsgOk : styles.inlineMsgErr,
+            ]}
+          >
+            <Ionicons
+              name={pwMsg.ok ? 'checkmark-circle' : 'alert-circle'}
+              size={14}
+              color={pwMsg.ok ? '#15803d' : '#dc2626'}
+            />
+            <Text
+              style={
+                pwMsg.ok ? styles.inlineMsgTextOk : styles.inlineMsgTextErr
+              }
+            >
+              {pwMsg.text}
+            </Text>
+          </View>
+        )}
+        <TouchableOpacity
+          style={[styles.acctBtn, pwSaving && styles.saveBtnDisabled]}
+          onPress={handlePasswordChange}
+          disabled={pwSaving}
+        >
+          {pwSaving ? (
+            <ActivityIndicator color="#fff" size="small" />
+          ) : (
+            <Text style={styles.acctBtnText}>Alterar senha</Text>
+          )}
+        </TouchableOpacity>
+      </View>
+    </ScrollView>
+  );
+
+  const renderDeleteAccount = () => (
+    <ScrollView
+      contentContainerStyle={styles.scroll}
+      keyboardShouldPersistTaps="handled"
+      showsVerticalScrollIndicator={false}
+    >
+      <View style={[styles.accountCard, styles.deleteCard, { marginTop: 24 }]}>
+        <View style={styles.accountCardHeader}>
+          <Ionicons name="trash-outline" size={16} color="#dc2626" />
+          <Text style={[styles.accountCardTitle, { color: '#dc2626' }]}>
+            Excluir minha conta
+          </Text>
+        </View>
+        <Text style={styles.deleteSubtitle}>
+          Esta ação é irreversível. Todos os dados (perfil, histórico, consultas
+          e assinatura) serão apagados conforme a LGPD.
+        </Text>
+
+        {!showDelete ? (
+          <TouchableOpacity
+            style={styles.deleteOpenBtn}
+            onPress={() => setShowDelete(true)}
+          >
+            <Text style={styles.deleteOpenBtnText}>
+              Solicitar exclusão de conta
+            </Text>
+          </TouchableOpacity>
+        ) : (
+          <>
+            <View style={styles.deleteWarning}>
+              <Ionicons name="warning" size={16} color="#b91c1c" />
+              <Text style={styles.deleteWarningText}>
+                <Text style={{ fontWeight: '700' }}>Atenção:</Text> esta ação é
+                permanente.
+              </Text>
+            </View>
+            <TextInput
+              style={[styles.input, { marginTop: 10 }]}
+              value={deletePw}
+              onChangeText={setDeletePw}
+              placeholder="Confirme sua senha"
+              placeholderTextColor="#9ca3af"
+              secureTextEntry
+              autoComplete="current-password"
+            />
+            <View style={styles.deleteActions}>
+              <TouchableOpacity
+                style={[
+                  styles.deleteConfirmBtn,
+                  deleteLoading && styles.saveBtnDisabled,
+                ]}
+                onPress={handleDeleteAccount}
+                disabled={deleteLoading || !deletePw}
+              >
+                {deleteLoading ? (
+                  <ActivityIndicator color="#fff" size="small" />
+                ) : (
+                  <Text style={styles.deleteConfirmBtnText}>
+                    Excluir permanentemente
+                  </Text>
+                )}
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.deleteCancelBtn}
+                onPress={() => {
+                  setShowDelete(false);
+                  setDeletePw('');
+                }}
+                disabled={deleteLoading}
+              >
+                <Text style={styles.deleteCancelBtnText}>Cancelar</Text>
+              </TouchableOpacity>
+            </View>
+          </>
+        )}
+      </View>
+    </ScrollView>
+  );
+
+  const TITLE_MAP: Record<TabFlag, string> = {
+    menu: 'Menu',
+    personalData: 'Dados do Perfil',
+    accountSettings: 'Configurações',
+    deleteAccount: 'Excluir Conta',
+  };
+
   return (
     <KeyboardAvoidingView
       style={styles.root}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      <View style={styles.header}>
-        {/* Avatar com botão de edição */}
-        <TouchableOpacity
-          style={styles.avatarWrapper}
-          onPress={handleAvatar}
-          disabled={avatarLoading}
-          activeOpacity={0.85}
-        >
-          {user?.avatarUrl ? (
-            <Image
-              source={{ uri: user.avatarUrl }}
-              style={styles.avatarImage}
-            />
-          ) : (
-            <View style={styles.avatarCircle}>
-              <Text style={styles.avatarInitial}>{initials}</Text>
-            </View>
-          )}
-          <View style={styles.avatarEditBadge}>
-            {avatarLoading ? (
-              <ActivityIndicator color="#fff" size={10} />
-            ) : (
-              <Ionicons name="camera" size={12} color="#fff" />
-            )}
-          </View>
-        </TouchableOpacity>
-        <Text style={styles.headerName}>{user?.name}</Text>
-        <Text style={styles.headerEmail}>{user?.email}</Text>
-      </View>
-
-      <ScrollView
-        contentContainerStyle={styles.scroll}
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
-      >
-        {/* ── Dados pessoais ── */}
-        <SectionHeader title="Dados pessoais" />
-
-        <Label text="Gênero" />
-        <ChipGroup
-          options={GENDERS}
-          value={form.gender}
-          onSelect={v => setForm(p => ({ ...p, gender: v }))}
-        />
-
-        <Label text="Data de nascimento" />
-        <TextInput
-          style={styles.input}
-          value={form.birthDate}
-          onChangeText={v => set('birthDate')(maskDate(v))}
-          placeholder="DD/MM/AAAA"
-          placeholderTextColor="#9ca3af"
-          keyboardType="numeric"
-          maxLength={10}
-        />
-
-        <View style={styles.row}>
-          <View style={styles.half}>
-            <Label text="Altura (cm)" />
-            <TextInput
-              style={styles.input}
-              value={form.heightCm}
-              onChangeText={set('heightCm')}
-              placeholder="ex: 165"
-              placeholderTextColor="#9ca3af"
-              keyboardType="numeric"
-            />
-          </View>
-          <View style={styles.half}>
-            <Label text="Peso (kg)" />
-            <TextInput
-              style={styles.input}
-              value={form.weightKg}
-              onChangeText={set('weightKg')}
-              placeholder="ex: 70.5"
-              placeholderTextColor="#9ca3af"
-              keyboardType="decimal-pad"
-            />
-          </View>
-        </View>
-
-        <Label text="Ocupação" />
-        <TextInput
-          style={styles.input}
-          value={form.occupation}
-          onChangeText={set('occupation')}
-          placeholder="Ex: Analista, Professora..."
-          placeholderTextColor="#9ca3af"
-        />
-
-        {/* ── Objetivos e hábitos ── */}
-        <SectionHeader title="Objetivos e hábitos" />
-
-        <Label text="Objetivo" />
-        <ChipGroup
-          options={GOALS}
-          value={form.goal}
-          onSelect={v => setForm(p => ({ ...p, goal: v }))}
-        />
-
-        <Label text="Nível de atividade" />
-        <ChipGroup
-          options={ACTIVITIES}
-          value={form.activityLevel}
-          onSelect={v => setForm(p => ({ ...p, activityLevel: v }))}
-        />
-
-        <Label text="Tipo de alimentação" />
-        <ChipGroup
-          options={DIETS}
-          value={form.dietType}
-          onSelect={v => setForm(p => ({ ...p, dietType: v }))}
-        />
-
-        <Label text="Refeições por dia" />
-        <TextInput
-          style={styles.input}
-          value={form.mealFrequency}
-          onChangeText={set('mealFrequency')}
-          placeholder="ex: 5"
-          placeholderTextColor="#9ca3af"
-          keyboardType="numeric"
-        />
-
-        <Label text="Alimentos que não gosta" />
-        <TextInput
-          style={styles.inputMulti}
-          value={form.foodDislikes}
-          onChangeText={set('foodDislikes')}
-          placeholder="Ex: fígado, beterraba..."
-          placeholderTextColor="#9ca3af"
-          multiline
-          numberOfLines={3}
-          textAlignVertical="top"
-        />
-
-        {/* ── GLP-1 ── */}
-        <SectionHeader title="GLP-1" />
-
-        <Label text="Medicamento em uso" />
-        <TextInput
-          style={styles.input}
-          value={form.glp1Medication}
-          onChangeText={set('glp1Medication')}
-          placeholder="Ex: Ozempic, Wegovy..."
-          placeholderTextColor="#9ca3af"
-        />
-
-        <Label text="Data de início do medicamento" />
-        <TextInput
-          style={styles.input}
-          value={form.glp1StartDate}
-          onChangeText={v => set('glp1StartDate')(maskDate(v))}
-          placeholder="DD/MM/AAAA"
-          placeholderTextColor="#9ca3af"
-          keyboardType="numeric"
-          maxLength={10}
-        />
-
-        {/* ── Saúde ── */}
-        <SectionHeader title="Saúde" />
-
-        <Label text="Alergias alimentares" />
-        <TextInput
-          style={styles.inputMulti}
-          value={form.allergies}
-          onChangeText={set('allergies')}
-          placeholder="Ex: amendoim, frutos do mar..."
-          placeholderTextColor="#9ca3af"
-          multiline
-          numberOfLines={2}
-          textAlignVertical="top"
-        />
-
-        <Label text="Intolerâncias" />
-        <TextInput
-          style={styles.inputMulti}
-          value={form.intolerances}
-          onChangeText={set('intolerances')}
-          placeholder="Ex: lactose, glúten..."
-          placeholderTextColor="#9ca3af"
-          multiline
-          numberOfLines={2}
-          textAlignVertical="top"
-        />
-
-        <Label text="Condições médicas" />
-        <TextInput
-          style={styles.inputMulti}
-          value={form.medicalConditions}
-          onChangeText={set('medicalConditions')}
-          placeholder="Ex: diabetes tipo 2, hipertensão..."
-          placeholderTextColor="#9ca3af"
-          multiline
-          numberOfLines={2}
-          textAlignVertical="top"
-        />
-
-        <Label text="Outros medicamentos" />
-        <TextInput
-          style={styles.inputMulti}
-          value={form.otherMedications}
-          onChangeText={set('otherMedications')}
-          placeholder="Ex: metformina 500mg..."
-          placeholderTextColor="#9ca3af"
-          multiline
-          numberOfLines={2}
-          textAlignVertical="top"
-        />
-
-        {/* ── Salvar perfil ── */}
-        <TouchableOpacity
-          style={[styles.saveBtn, saving && styles.saveBtnDisabled]}
-          onPress={handleSave}
-          disabled={saving}
-        >
-          {saving ? (
-            <ActivityIndicator color="#fff" size="small" />
-          ) : saved ? (
-            <>
-              <Ionicons name="checkmark-circle" size={18} color="#fff" />
-              <Text style={styles.saveBtnText}>Salvo!</Text>
-            </>
-          ) : (
-            <Text style={styles.saveBtnText}>Salvar perfil</Text>
-          )}
-        </TouchableOpacity>
-
-        {/* ══════════════════════════════════════
-            SEÇÃO DE CONTA
-            ══════════════════════════════════════ */}
-        <SectionHeader title="Conta" />
-
-        {/* ── Alterar nome ── */}
-        <View style={styles.accountCard}>
-          <View style={styles.accountCardHeader}>
-            <Ionicons name="person-outline" size={16} color="#16a34a" />
-            <Text style={styles.accountCardTitle}>Nome</Text>
-          </View>
-          <TextInput
-            style={[styles.input, { marginTop: 8 }]}
-            value={name}
-            onChangeText={setName}
-            placeholder="Seu nome completo"
-            placeholderTextColor="#9ca3af"
-          />
-          {nameMsg && (
-            <View
-              style={[
-                styles.inlineMsg,
-                nameMsg.ok ? styles.inlineMsgOk : styles.inlineMsgErr,
-              ]}
-            >
-              <Ionicons
-                name={nameMsg.ok ? 'checkmark-circle' : 'alert-circle'}
-                size={14}
-                color={nameMsg.ok ? '#15803d' : '#dc2626'}
-              />
-              <Text
-                style={
-                  nameMsg.ok ? styles.inlineMsgTextOk : styles.inlineMsgTextErr
-                }
-              >
-                {nameMsg.text}
-              </Text>
-            </View>
-          )}
+      {activeTab === 'menu' ? (
+        <View style={styles.header}>
           <TouchableOpacity
-            style={[styles.acctBtn, nameSaving && styles.saveBtnDisabled]}
-            onPress={handleNameSave}
-            disabled={nameSaving}
+            style={styles.avatarWrapper}
+            onPress={handleAvatar}
+            disabled={avatarLoading}
+            activeOpacity={0.85}
           >
-            {nameSaving ? (
-              <ActivityIndicator color="#fff" size="small" />
-            ) : (
-              <Text style={styles.acctBtnText}>Salvar nome</Text>
-            )}
-          </TouchableOpacity>
-        </View>
-
-        {/* ── Alterar senha ── */}
-        <View style={styles.accountCard}>
-          <View style={styles.accountCardHeader}>
-            <Ionicons name="lock-closed-outline" size={16} color="#16a34a" />
-            <Text style={styles.accountCardTitle}>Alterar senha</Text>
-          </View>
-          <TextInput
-            style={[styles.input, { marginTop: 8 }]}
-            value={currentPw}
-            onChangeText={setCurrentPw}
-            placeholder="Senha atual"
-            placeholderTextColor="#9ca3af"
-            secureTextEntry
-            autoComplete="current-password"
-          />
-          <TextInput
-            style={[styles.input, { marginTop: 10 }]}
-            value={newPw}
-            onChangeText={setNewPw}
-            placeholder="Nova senha (mín. 6 caracteres)"
-            placeholderTextColor="#9ca3af"
-            secureTextEntry
-            autoComplete="new-password"
-          />
-          <TextInput
-            style={[styles.input, { marginTop: 10 }]}
-            value={confirmPw}
-            onChangeText={setConfirmPw}
-            placeholder="Confirmar nova senha"
-            placeholderTextColor="#9ca3af"
-            secureTextEntry
-            autoComplete="new-password"
-          />
-          {pwMsg && (
-            <View
-              style={[
-                styles.inlineMsg,
-                pwMsg.ok ? styles.inlineMsgOk : styles.inlineMsgErr,
-              ]}
-            >
-              <Ionicons
-                name={pwMsg.ok ? 'checkmark-circle' : 'alert-circle'}
-                size={14}
-                color={pwMsg.ok ? '#15803d' : '#dc2626'}
+            {user?.avatarUrl ? (
+              <Image
+                source={{ uri: user.avatarUrl }}
+                style={styles.avatarImage}
               />
-              <Text
-                style={
-                  pwMsg.ok ? styles.inlineMsgTextOk : styles.inlineMsgTextErr
-                }
-              >
-                {pwMsg.text}
-              </Text>
-            </View>
-          )}
-          <TouchableOpacity
-            style={[styles.acctBtn, pwSaving && styles.saveBtnDisabled]}
-            onPress={handlePasswordChange}
-            disabled={pwSaving}
-          >
-            {pwSaving ? (
-              <ActivityIndicator color="#fff" size="small" />
             ) : (
-              <Text style={styles.acctBtnText}>Alterar senha</Text>
+              <View style={styles.avatarCircle}>
+                <Text style={styles.avatarInitial}>{initials}</Text>
+              </View>
             )}
+            <View style={styles.avatarEditBadge}>
+              {avatarLoading ? (
+                <ActivityIndicator color="#fff" size={10} />
+              ) : (
+                <Ionicons name="camera" size={12} color="#fff" />
+              )}
+            </View>
           </TouchableOpacity>
+          <Text style={styles.headerName}>{user?.name}</Text>
+          <Text style={styles.headerEmail}>{user?.email}</Text>
         </View>
-
-        {/* ── Excluir conta ── */}
-        <View style={[styles.accountCard, styles.deleteCard]}>
-          <View style={styles.accountCardHeader}>
-            <Ionicons name="trash-outline" size={16} color="#dc2626" />
-            <Text style={[styles.accountCardTitle, { color: '#dc2626' }]}>
-              Excluir minha conta
-            </Text>
-          </View>
-          <Text style={styles.deleteSubtitle}>
-            Esta ação é irreversível. Todos os dados (perfil, histórico,
-            consultas e assinatura) serão apagados conforme a LGPD.
+      ) : (
+        <View style={styles.secondaryHeader}>
+          <TouchableOpacity
+            style={styles.backBtn}
+            onPress={() => setActiveTab('menu')}
+          >
+            <Ionicons name="arrow-back" size={24} color="#111827" />
+          </TouchableOpacity>
+          <Text style={styles.secondaryHeaderTitle}>
+            {TITLE_MAP[activeTab]}
           </Text>
-
-          {!showDelete ? (
-            <TouchableOpacity
-              style={styles.deleteOpenBtn}
-              onPress={() => setShowDelete(true)}
-            >
-              <Text style={styles.deleteOpenBtnText}>
-                Solicitar exclusão de conta
-              </Text>
-            </TouchableOpacity>
-          ) : (
-            <>
-              <View style={styles.deleteWarning}>
-                <Ionicons name="warning" size={16} color="#b91c1c" />
-                <Text style={styles.deleteWarningText}>
-                  <Text style={{ fontWeight: '700' }}>Atenção:</Text> esta ação
-                  é permanente.
-                </Text>
-              </View>
-              <TextInput
-                style={[styles.input, { marginTop: 10 }]}
-                value={deletePw}
-                onChangeText={setDeletePw}
-                placeholder="Confirme sua senha"
-                placeholderTextColor="#9ca3af"
-                secureTextEntry
-                autoComplete="current-password"
-              />
-              <View style={styles.deleteActions}>
-                <TouchableOpacity
-                  style={[
-                    styles.deleteConfirmBtn,
-                    deleteLoading && styles.saveBtnDisabled,
-                  ]}
-                  onPress={handleDeleteAccount}
-                  disabled={deleteLoading || !deletePw}
-                >
-                  {deleteLoading ? (
-                    <ActivityIndicator color="#fff" size="small" />
-                  ) : (
-                    <Text style={styles.deleteConfirmBtnText}>
-                      Excluir permanentemente
-                    </Text>
-                  )}
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.deleteCancelBtn}
-                  onPress={() => {
-                    setShowDelete(false);
-                    setDeletePw('');
-                  }}
-                  disabled={deleteLoading}
-                >
-                  <Text style={styles.deleteCancelBtnText}>Cancelar</Text>
-                </TouchableOpacity>
-              </View>
-            </>
-          )}
+          <View style={{ width: 40 }} />
         </View>
+      )}
 
-        <View style={{ height: 32 }} />
-      </ScrollView>
+      {activeTab === 'menu' && renderMenu()}
+      {activeTab === 'personalData' && renderPersonalData()}
+      {activeTab === 'accountSettings' && renderAccountSettings()}
+      {activeTab === 'deleteAccount' && renderDeleteAccount()}
     </KeyboardAvoidingView>
   );
 }
@@ -1062,4 +1162,85 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   deleteCancelBtnText: { color: '#6b7280', fontWeight: '600', fontSize: 13 },
+
+  // ── Navegação e Menu ─────────────────────────────────────
+  menuBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    padding: 16,
+    borderRadius: 16,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.03,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  menuBtnDanger: {
+    borderColor: '#fecaca',
+  },
+  menuIconWrap: {
+    width: 40,
+    height: 40,
+    borderRadius: 10,
+    backgroundColor: '#eff6ff',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 14,
+  },
+  menuIconWrapDanger: {
+    backgroundColor: '#fef2f2',
+  },
+  menuTextWrap: {
+    flex: 1,
+  },
+  menuTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#111827',
+  },
+  menuSubtitle: {
+    fontSize: 13,
+    color: '#6b7280',
+    marginTop: 2,
+  },
+  logoutBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    marginTop: 24,
+    paddingVertical: 14,
+    backgroundColor: '#f3f4f6',
+    borderRadius: 12,
+  },
+  logoutBtnText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#4b5563',
+  },
+
+  secondaryHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingTop: Platform.OS === 'ios' ? 60 : 40,
+    paddingBottom: 16,
+    paddingHorizontal: 20,
+    backgroundColor: '#ffffff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#f3f4f6',
+  },
+  backBtn: {
+    padding: 8,
+    marginLeft: -8,
+  },
+  secondaryHeaderTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#111827',
+  },
 });

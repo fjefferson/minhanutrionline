@@ -335,22 +335,7 @@ function Glp1ScreenInner() {
             </View>
           )}
 
-          {/* Botão nova orientação */}
-          <TouchableOpacity
-            style={[
-              styles.newBtn,
-              (freeLimitReached || profileBlocked) && styles.newBtnDisabled,
-            ]}
-            onPress={() => {
-              if (profileBlocked) return;
-              if (freeLimitReached) return;
-              goToForm();
-            }}
-            activeOpacity={0.85}
-          >
-            <Ionicons name="add-circle" size={20} color="#fff" />
-            <Text style={styles.newBtnText}>Nova orientação</Text>
-          </TouchableOpacity>
+          <Text style={styles.sectionLabel}>Histórico de orientações</Text>
 
           {/* Lista de histórico */}
           {loadingHistory ? (
@@ -533,6 +518,23 @@ function Glp1ScreenInner() {
             })
           )}
         </ScrollView>
+
+        {/* FAB: Nova orientação */}
+        <TouchableOpacity
+          style={[
+            styles.fab,
+            (freeLimitReached || profileBlocked) && styles.fabDisabled,
+          ]}
+          onPress={() => {
+            if (profileBlocked) return;
+            if (freeLimitReached) return;
+            goToForm();
+          }}
+          activeOpacity={0.85}
+        >
+          <Ionicons name="add" size={24} color="#fff" />
+          <Text style={styles.fabText}>Nova orientação</Text>
+        </TouchableOpacity>
       </View>
     );
   }
@@ -952,29 +954,32 @@ const styles = StyleSheet.create({
   },
   freeCounterText: { fontSize: 13, color: '#92400e', fontWeight: '600' },
 
-  newBtn: {
+  // FAB
+  fab: {
+    position: 'absolute',
+    bottom: 114,
+    right: 20,
     backgroundColor: '#2563EB', // Royal Blue
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    alignSelf: 'flex-start',
-    paddingHorizontal: 24,
+    paddingHorizontal: 20,
     borderRadius: 100, // Pílula
     paddingVertical: 14,
-    marginBottom: 20,
-    gap: 8,
-    elevation: 6,
+    gap: 6,
+    elevation: 8,
     shadowColor: '#2563EB',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.25,
-    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    zIndex: 999,
   },
-  newBtnDisabled: { opacity: 0.5 },
-  newBtnText: {
+  fabDisabled: { opacity: 0.5 },
+  fabText: {
     color: '#fff',
-    fontSize: 17,
+    fontSize: 16,
     fontWeight: '700',
-    letterSpacing: 0.3,
+    letterSpacing: 0.2,
   },
 
   emptyBox: { alignItems: 'center', paddingTop: 40, gap: 12 },

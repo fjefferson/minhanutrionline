@@ -86,8 +86,10 @@ export default function AnamnesisPlans({ navigation }: Props) {
       contentContainerStyle={styles.scroll}
       showsVerticalScrollIndicator={false}
     >
-      {/* Header */}
       <View style={styles.header}>
+        <View style={styles.headerIcon}>
+          <Ionicons name="sparkles" size={28} color="#2563EB" />
+        </View>
         <Text style={styles.title}>Escolha seu plano</Text>
         <Text style={styles.sub}>
           Acesse o suporte nutricional personalizado para sua jornada com GLP-1
@@ -106,8 +108,8 @@ export default function AnamnesisPlans({ navigation }: Props) {
               <View style={styles.cardTitleRow}>
                 {isPlus && (
                   <View style={styles.badgePlus}>
-                    <Ionicons name="star" size={10} color="#fff" />
-                    <Text style={styles.badgePlusText}>RECOMENDADO</Text>
+                    <Ionicons name="star" size={10} color="#FBBF24" />
+                    <Text style={styles.badgePlusText}> MAIS POPULAR</Text>
                   </View>
                 )}
                 {isCurrent && (
@@ -124,20 +126,36 @@ export default function AnamnesisPlans({ navigation }: Props) {
                   {formatPrice(plan.priceInCents)}
                 </Text>
                 {plan.priceInCents > 0 && (
-                  <Text style={styles.pricePeriod}>/mês</Text>
+                  <Text
+                    style={[
+                      styles.pricePeriod,
+                      isPlus && styles.pricePeriodPlus,
+                    ]}
+                  >
+                    /mês
+                  </Text>
                 )}
               </View>
             </View>
+
+            <View style={[styles.divider, isPlus && styles.dividerPlus]} />
 
             {/* Features */}
             <View style={styles.features}>
               {plan.features.map((f, i) => (
                 <View key={i} style={styles.featureRow}>
-                  <Ionicons
-                    name="checkmark-circle"
-                    size={16}
-                    color={isPlus ? '#16a34a' : '#6b7280'}
-                  />
+                  <View
+                    style={[
+                      styles.iconCheckbox,
+                      isPlus && styles.iconCheckboxPlus,
+                    ]}
+                  >
+                    <Ionicons
+                      name="checkmark"
+                      size={12}
+                      color={isPlus ? '#111827' : '#fff'}
+                    />
+                  </View>
                   <Text
                     style={[
                       styles.featureText,
@@ -192,37 +210,48 @@ export default function AnamnesisPlans({ navigation }: Props) {
           <View style={styles.cardTitleRow}>
             {!currentPlanType && (
               <View style={styles.badgeCurrent}>
-                <Text style={styles.badgeCurrentText}>Plano atual</Text>
+                <Ionicons name="checkmark-circle" size={14} color="#16a34a" />
+                <Text style={styles.badgeCurrentText}> Seu plano atual</Text>
               </View>
             )}
           </View>
           <Text style={styles.planName}>Gratuito</Text>
           <View style={styles.priceRow}>
-            <Text style={styles.price}>R$ 0</Text>
+            <Text style={styles.price}>Grátis</Text>
           </View>
         </View>
 
+        <View style={styles.divider} />
+
         <View style={styles.features}>
           <View style={styles.featureRow}>
-            <Ionicons name="checkmark-circle" size={16} color="#6b7280" />
+            <View style={styles.iconCheckbox}>
+              <Ionicons name="checkmark" size={12} color="#fff" />
+            </View>
             <Text style={styles.featureText}>
               3 orientações de sintomas com IA
             </Text>
           </View>
           <View style={styles.featureRow}>
-            <Ionicons name="checkmark-circle" size={16} color="#6b7280" />
+            <View style={styles.iconCheckbox}>
+              <Ionicons name="checkmark" size={12} color="#fff" />
+            </View>
             <Text style={styles.featureText}>Acesso ao conteúdo educativo</Text>
           </View>
           <View style={styles.featureRow}>
-            <Ionicons name="close-circle" size={16} color="#d1d5db" />
+            <View style={[styles.iconCheckbox, { backgroundColor: '#f3f4f6' }]}>
+              <Ionicons name="close" size={12} color="#9ca3af" />
+            </View>
             <Text style={[styles.featureText, styles.featureDisabled]}>
-              Chat com a nutricionista
+              Chat ilimitado com a nutricionista
             </Text>
           </View>
           <View style={styles.featureRow}>
-            <Ionicons name="close-circle" size={16} color="#d1d5db" />
+            <View style={[styles.iconCheckbox, { backgroundColor: '#f3f4f6' }]}>
+              <Ionicons name="close" size={12} color="#9ca3af" />
+            </View>
             <Text style={[styles.featureText, styles.featureDisabled]}>
-              Cardápio personalizado
+              Cardápio personalizado Premium
             </Text>
           </View>
         </View>
@@ -245,13 +274,13 @@ export default function AnamnesisPlans({ navigation }: Props) {
             style={[styles.planBtn, styles.planBtnFree]}
             onPress={handleFinish}
             disabled={finishing}
-            activeOpacity={0.85}
+            activeOpacity={0.88}
           >
             <Text style={[styles.planBtnText, styles.planBtnTextFree]}>
               {finishing ? 'Entrando...' : 'Continuar grátis'}
             </Text>
             {!finishing && (
-              <Ionicons name="arrow-forward" size={16} color="#16a34a" />
+              <Ionicons name="arrow-forward" size={18} color="#4b5563" />
             )}
           </TouchableOpacity>
         )}
@@ -280,33 +309,60 @@ const styles = StyleSheet.create({
   scroll: { backgroundColor: '#f9fafb', paddingBottom: 24 },
 
   header: {
-    backgroundColor: '#16a34a',
-    paddingTop: 60,
-    paddingBottom: 32,
+    backgroundColor: '#fff',
+    paddingTop: 80,
+    paddingBottom: 40,
     paddingHorizontal: 24,
+    alignItems: 'center',
   },
-  title: { fontSize: 26, fontWeight: '800', color: '#fff', marginBottom: 8 },
-  sub: { fontSize: 14, color: '#bbf7d0', lineHeight: 20 },
+  headerIcon: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: '#eff6ff',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 20,
+  },
+  title: {
+    fontSize: 32,
+    fontWeight: '900',
+    color: '#111827',
+    marginBottom: 12,
+    textAlign: 'center',
+    letterSpacing: -1,
+  },
+  sub: {
+    fontSize: 16,
+    color: '#6b7280',
+    lineHeight: 24,
+    textAlign: 'center',
+    paddingHorizontal: 16,
+  },
 
   card: {
     marginHorizontal: 16,
-    marginTop: 16,
+    marginTop: -20,
+    marginBottom: 20,
     backgroundColor: '#fff',
-    borderRadius: 18,
-    padding: 20,
-    borderWidth: 1.5,
+    borderRadius: 24,
+    padding: 24,
+    borderWidth: 1,
     borderColor: '#e5e7eb',
-    elevation: 2,
+    elevation: 3,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
   },
   cardPlus: {
-    borderColor: '#16a34a',
+    borderColor: '#111827',
+    backgroundColor: '#111827',
     borderWidth: 2,
-    elevation: 4,
-    shadowOpacity: 0.12,
+    elevation: 8,
+    shadowColor: '#111827',
+    shadowOpacity: 0.25,
+    shadowRadius: 10,
   },
 
   cardHeader: { marginBottom: 16 },
@@ -316,7 +372,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    backgroundColor: '#16a34a',
+    backgroundColor: 'rgba(255,255,255,0.15)',
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 20,
@@ -324,14 +380,12 @@ const styles = StyleSheet.create({
   badgePlusText: {
     fontSize: 10,
     fontWeight: '800',
-    color: '#fff',
+    color: '#FBBF24',
     letterSpacing: 0.5,
   },
 
   badgeCurrent: {
-    backgroundColor: '#f0fdf4',
-    borderWidth: 1,
-    borderColor: '#16a34a',
+    backgroundColor: '#dcfce7',
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 20,
@@ -339,40 +393,67 @@ const styles = StyleSheet.create({
   badgeCurrentText: { fontSize: 10, fontWeight: '700', color: '#16a34a' },
 
   planName: {
-    fontSize: 20,
+    fontSize: 24,
     fontWeight: '800',
     color: '#111827',
-    marginBottom: 4,
+    letterSpacing: -0.5,
   },
-  planNamePlus: { color: '#16a34a' },
+  planNamePlus: { color: '#fff' },
 
   priceRow: { flexDirection: 'row', alignItems: 'baseline', gap: 4 },
-  price: { fontSize: 28, fontWeight: '800', color: '#374151' },
-  pricePlus: { color: '#16a34a' },
-  pricePeriod: { fontSize: 14, color: '#9ca3af' },
+  price: {
+    fontSize: 32,
+    fontWeight: '900',
+    color: '#111827',
+    letterSpacing: -1,
+  },
+  pricePlus: { color: '#fff' },
+  pricePeriod: { fontSize: 15, color: '#6b7280', fontWeight: '600' },
+  pricePeriodPlus: { color: '#9ca3af' },
+
+  divider: { height: 1, backgroundColor: '#f3f4f6', marginBottom: 16 },
+  dividerPlus: { backgroundColor: '#374151' },
 
   features: { gap: 10, marginBottom: 20 },
   featureRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  featureText: { fontSize: 14, color: '#6b7280', flex: 1 },
-  featureTextPlus: { color: '#374151' },
-  featureDisabled: { color: '#d1d5db', textDecorationLine: 'line-through' },
+  iconCheckbox: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: '#16a34a',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  iconCheckboxPlus: {
+    backgroundColor: '#fff',
+  },
+  featureText: { fontSize: 14, color: '#374151', flex: 1, fontWeight: '500' },
+  featureTextPlus: { color: '#e5e7eb' },
+  featureDisabled: { color: '#9ca3af', textDecorationLine: 'line-through' },
 
   planBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    height: 50,
+    height: 54,
     borderRadius: 14,
+    shadowColor: '#2563EB',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 10,
+    elevation: 4,
   },
-  planBtnPlus: { backgroundColor: '#16a34a' },
+  planBtnPlus: { backgroundColor: '#2563EB' },
   planBtnFree: {
     borderWidth: 1.5,
-    borderColor: '#16a34a',
-    backgroundColor: '#f0fdf4',
+    borderColor: '#e5e7eb',
+    backgroundColor: '#fff',
+    elevation: 0,
+    shadowOpacity: 0,
   },
-  planBtnText: { fontSize: 15, fontWeight: '700', color: '#fff' },
-  planBtnTextFree: { color: '#16a34a' },
+  planBtnText: { fontSize: 16, fontWeight: '800', color: '#fff' },
+  planBtnTextFree: { color: '#374151' },
 
   alreadyPaidNote: {
     flexDirection: 'row',

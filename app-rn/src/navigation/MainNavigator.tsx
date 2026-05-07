@@ -46,12 +46,12 @@ const TABS = [
   {
     name: 'Glp1' as const,
     label: 'Guia GLP-1',
-    icon: 'flash',
-    iconOutline: 'flash-outline',
+    icon: 'pulse',
+    iconOutline: 'pulse-outline',
   },
   {
     name: 'Chat' as const,
-    label: 'Chat',
+    label: 'Chat Nutri',
     icon: 'chatbubble-ellipses',
     iconOutline: 'chatbubble-ellipses-outline',
   },

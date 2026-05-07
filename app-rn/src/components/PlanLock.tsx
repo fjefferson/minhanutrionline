@@ -6,7 +6,6 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { LinearGradient } from 'react-native-linear-gradient';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useNavigation } from '@react-navigation/native';
 
@@ -28,44 +27,41 @@ export default function PlanLock({
   featureName,
   description,
   requiredPlan,
-  headerColors = ['#16a34a', '#15803d'],
 }: Props) {
   const navigation = useNavigation<any>();
 
   return (
     <View style={styles.root}>
-      <LinearGradient colors={headerColors} style={styles.header}>
+      <View style={styles.header}>
         <Text style={styles.headerTitle}>{featureName}</Text>
         <Text style={styles.headerSub}>Recurso exclusivo</Text>
-      </LinearGradient>
+      </View>
 
       <View style={styles.body}>
         <View style={styles.iconWrap}>
-          <Ionicons name={icon} size={40} color="#16a34a" />
+          <Ionicons name={icon} size={44} color="#2563EB" />
         </View>
 
         <Text style={styles.title}>Plano necessário</Text>
         <Text style={styles.desc}>{description}</Text>
 
         <View style={styles.badge}>
-          <Ionicons name="star" size={14} color="#16a34a" />
+          <Ionicons name="star" size={14} color="#FBBF24" />
           <Text style={styles.badgeText}>{requiredPlan}</Text>
         </View>
 
         <TouchableOpacity
           style={styles.btn}
           onPress={() => navigation.navigate('Plans' as never)}
-          activeOpacity={0.85}
+          activeOpacity={0.88}
         >
-          <LinearGradient
-            colors={['#16a34a', '#15803d']}
-            style={styles.btnGrad}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-          >
-            <Ionicons name="arrow-up-circle-outline" size={18} color="#fff" />
-            <Text style={styles.btnText}>Ver planos</Text>
-          </LinearGradient>
+          <Text style={styles.btnText}>Ver planos</Text>
+          <Ionicons
+            name="arrow-forward"
+            size={18}
+            color="#fff"
+            style={{ marginLeft: 6 }}
+          />
         </TouchableOpacity>
       </View>
     </View>
@@ -75,79 +71,84 @@ export default function PlanLock({
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: '#f9fafb' },
   header: {
-    paddingTop: Platform.OS === 'ios' ? 56 : 44,
-    paddingBottom: 20,
-    paddingHorizontal: 20,
+    paddingTop: Platform.OS === 'ios' ? 60 : 40,
+    paddingBottom: 24,
+    paddingHorizontal: 24,
+    backgroundColor: '#f9fafb',
   },
-  headerTitle: { fontSize: 22, fontWeight: '800', color: '#fff' },
-  headerSub: { fontSize: 13, color: 'rgba(255,255,255,0.75)', marginTop: 2 },
+  headerTitle: {
+    fontSize: 26,
+    fontWeight: '800',
+    color: '#111827',
+    letterSpacing: -0.5,
+  },
+  headerSub: { fontSize: 16, color: '#6b7280', marginTop: 4 },
 
   body: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 32,
-    paddingBottom: 60,
+    paddingBottom: 80,
   },
 
   iconWrap: {
-    width: 88,
-    height: 88,
-    borderRadius: 44,
-    backgroundColor: '#f0fdf4',
-    borderWidth: 2,
-    borderColor: '#bbf7d0',
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    backgroundColor: '#eff6ff',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 20,
+    marginBottom: 24,
   },
 
   title: {
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: '800',
     color: '#111827',
     marginBottom: 10,
     textAlign: 'center',
+    letterSpacing: -0.5,
   },
   desc: {
-    fontSize: 14,
+    fontSize: 15,
     color: '#6b7280',
     textAlign: 'center',
-    lineHeight: 20,
-    marginBottom: 18,
+    lineHeight: 22,
+    marginBottom: 20,
   },
 
   badge: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: '#f0fdf4',
-    borderWidth: 1,
-    borderColor: '#bbf7d0',
+    backgroundColor: '#111827',
     borderRadius: 20,
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    marginBottom: 28,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    marginBottom: 36,
   },
-  badgeText: { fontSize: 13, fontWeight: '700', color: '#15803d' },
+  badgeText: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#fff',
+    letterSpacing: 0.5,
+  },
 
   btn: {
-    borderRadius: 14,
-    overflow: 'hidden',
-    width: '100%',
-    maxWidth: 280,
-    elevation: 4,
-    shadowColor: '#16a34a',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 10,
-  },
-  btnGrad: {
+    backgroundColor: '#2563EB',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
-    paddingVertical: 14,
+    borderRadius: 14,
+    width: '100%',
+    maxWidth: 280,
+    paddingVertical: 16,
+    shadowColor: '#2563EB',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 10,
+    elevation: 4,
   },
-  btnText: { fontSize: 15, fontWeight: '700', color: '#fff' },
+  btnText: { fontSize: 16, fontWeight: '800', color: '#fff' },
 });

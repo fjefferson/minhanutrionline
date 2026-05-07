@@ -1,0 +1,13 @@
+diff --git a/node_modules/react-native-add-calendar-event/android/build.gradle b/node_modules/react-native-add-calendar-event/android/build.gradle
+index 22eb1f4..e87d1b2 100644
+--- a/node_modules/react-native-add-calendar-event/android/build.gradle
++++ b/node_modules/react-native-add-calendar-event/android/build.gradle
+@@ -5,7 +5,7 @@ def safeExtGet(prop, fallback) {
+ buildscript {
+     repositories {
+         google()
+-        jcenter()
++        mavenCentral()
+     }
+ 
+     dependencies {

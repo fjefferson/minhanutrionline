@@ -150,6 +150,8 @@ export default function MaterialsScreen() {
   const [detail, setDetail] = useState<Material | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [reaction, setReaction] = useState<'LIKE' | 'DISLIKE' | null>(null);
+  const [likes, setLikes] = useState(0);
+  const [dislikes, setDislikes] = useState(0);
   const [reactionLoading, setReactionLoading] = useState(false);
   const [comments, setComments] = useState<Comment[]>([]);
   const [commentText, setCommentText] = useState('');
@@ -189,21 +191,28 @@ export default function MaterialsScreen() {
     setComments([]);
     setCommentText('');
     setReaction(null);
+    setLikes(0);
+    setDislikes(0);
     setDetailLoading(true);
     try {
       const [detailRes, reactionRes, commentsRes] = await Promise.allSettled([
         api.get<Material>(`/materials/${m.id}`),
-        api.get<{ type: 'LIKE' | 'DISLIKE' | null }>(
-          `/materials/${m.id}/reaction`,
-        ),
+        api.get<{
+          userReaction: 'LIKE' | 'DISLIKE' | null;
+          likes: number;
+          dislikes: number;
+        }>(`/materials/${m.id}/reaction`),
         api.get<Comment[]>(`/materials/${m.id}/comments`),
       ]);
       if (detailRes.status === 'fulfilled') {
         setDetail(detailRes.value.data);
         api.post(`/materials/${m.id}/view`).catch(() => {});
       }
-      if (reactionRes.status === 'fulfilled')
-        setReaction(reactionRes.value.data.type);
+      if (reactionRes.status === 'fulfilled') {
+        setReaction(reactionRes.value.data.userReaction);
+        setLikes(reactionRes.value.data.likes);
+        setDislikes(reactionRes.value.data.dislikes);
+      }
       if (commentsRes.status === 'fulfilled')
         setComments(commentsRes.value.data);
     } finally {
@@ -227,12 +236,41 @@ export default function MaterialsScreen() {
     if (!detail || reactionLoading) return;
     setReactionLoading(true);
     const prev = reaction;
-    const next = reaction === type ? null : type;
-    setReaction(next);
+    const prevLikes = likes;
+    const prevDislikes = dislikes;
+
+    // optimistically update
+    if (type === 'LIKE') {
+      if (reaction === 'LIKE') {
+        setReaction(null);
+        setLikes(prevLikes - 1);
+      } else {
+        setReaction('LIKE');
+        setLikes(prevLikes + 1);
+        if (reaction === 'DISLIKE') setDislikes(prevDislikes - 1);
+      }
+    } else {
+      if (reaction === 'DISLIKE') {
+        setReaction(null);
+        setDislikes(prevDislikes - 1);
+      } else {
+        setReaction('DISLIKE');
+        setDislikes(prevDislikes + 1);
+        if (reaction === 'LIKE') setLikes(prevLikes - 1);
+      }
+    }
+
     try {
-      await api.post(`/materials/${detail.id}/reaction`, { type });
+      const { data } = await api.post(`/materials/${detail.id}/reaction`, {
+        type,
+      });
+      setReaction(data.userReaction);
+      setLikes(data.likes);
+      setDislikes(data.dislikes);
     } catch {
       setReaction(prev);
+      setLikes(prevLikes);
+      setDislikes(prevDislikes);
     } finally {
       setReactionLoading(false);
     }
@@ -400,9 +438,6 @@ export default function MaterialsScreen() {
 
               {/* Reaction */}
               <View style={styles.reactionRow}>
-                <Text style={styles.reactionLabel}>
-                  Este material foi útil?
-                </Text>
                 <View style={styles.reactionBtns}>
                   <TouchableOpacity
                     style={[
@@ -426,7 +461,7 @@ export default function MaterialsScreen() {
                         reaction === 'LIKE' && { color: '#16a34a' },
                       ]}
                     >
-                      Sim
+                      {likes}
                     </Text>
                   </TouchableOpacity>
                   <TouchableOpacity
@@ -447,14 +482,6 @@ export default function MaterialsScreen() {
                       size={18}
                       color={reaction === 'DISLIKE' ? '#ef4444' : '#6b7280'}
                     />
-                    <Text
-                      style={[
-                        styles.reactionBtnText,
-                        reaction === 'DISLIKE' && { color: '#ef4444' },
-                      ]}
-                    >
-                      Não
-                    </Text>
                   </TouchableOpacity>
                 </View>
               </View>
@@ -1013,20 +1040,8 @@ const styles = StyleSheet.create({
 
   // Reaction
   reactionRow: {
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
     marginBottom: 20,
-    elevation: 1,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04,
-    shadowRadius: 4,
   },
-  reactionLabel: { fontSize: 14, fontWeight: '600', color: '#374151' },
   reactionBtns: { flexDirection: 'row', gap: 10 },
   reactionBtn: {
     flexDirection: 'row',

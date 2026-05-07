@@ -101,17 +101,24 @@ export default function PlansScreen() {
             </TouchableOpacity>
           </View>
         ) : (
-          plans.map(plan => {
+          plans.map((plan, index) => {
             const isCurrent = currentPlan === plan.type;
             const highlight = plan.type === HIGHLIGHT_TYPE;
+            const isPremium = plan.type === 'PREMIUM';
+
             return (
               <View
                 key={plan.type}
-                style={[styles.card, highlight && styles.cardHighlight]}
+                style={[
+                  styles.card,
+                  highlight && styles.cardHighlight,
+                  isPremium && !highlight && styles.cardPremium,
+                ]}
               >
                 {highlight && (
                   <View style={styles.popularBadge}>
-                    <Text style={styles.popularText}>⭐ Mais popular</Text>
+                    <Ionicons name="star" size={12} color="#FBBF24" />
+                    <Text style={styles.popularText}> Mais Popular</Text>
                   </View>
                 )}
                 {isCurrent && (
@@ -121,13 +128,18 @@ export default function PlansScreen() {
                       highlight && styles.currentBadgeHighlight,
                     ]}
                   >
+                    <Ionicons
+                      name="checkmark-circle"
+                      size={14}
+                      color={highlight ? '#fff' : '#16a34a'}
+                    />
                     <Text
                       style={[
                         styles.currentBadgeText,
                         highlight && styles.currentBadgeTextHighlight,
                       ]}
                     >
-                      Plano atual
+                      Seu plano atual
                     </Text>
                   </View>
                 )}
@@ -157,15 +169,26 @@ export default function PlansScreen() {
                   </Text>
                 </View>
 
+                {/* Separador customizado */}
+                <View
+                  style={[styles.divider, highlight && styles.dividerHighlight]}
+                />
+
                 <View style={styles.featureList}>
                   {plan.features.map(f => (
                     <View key={f} style={styles.featureRow}>
-                      <Ionicons
-                        name="checkmark"
-                        size={16}
-                        color={highlight ? '#bbf7d0' : '#16a34a'}
-                        style={{ marginTop: 1 }}
-                      />
+                      <View
+                        style={[
+                          styles.iconCheckbox,
+                          highlight && styles.iconCheckboxHighlight,
+                        ]}
+                      >
+                        <Ionicons
+                          name="checkmark"
+                          size={14}
+                          color={highlight ? '#16a34a' : '#fff'}
+                        />
+                      </View>
                       <Text
                         style={[
                           styles.featureText,
@@ -200,7 +223,7 @@ export default function PlansScreen() {
                     onPress={() =>
                       navigation.navigate('Checkout', { planType: plan.type })
                     }
-                    activeOpacity={0.85}
+                    activeOpacity={0.88}
                   >
                     <Text
                       style={[
@@ -210,6 +233,12 @@ export default function PlansScreen() {
                     >
                       {currentPlan ? 'Mudar para este plano' : 'Assinar agora'}
                     </Text>
+                    <Ionicons
+                      name="arrow-forward"
+                      size={18}
+                      color={highlight ? '#fff' : '#fff'}
+                      style={{ marginLeft: 6 }}
+                    />
                   </TouchableOpacity>
                 )}
               </View>
@@ -255,99 +284,144 @@ const styles = StyleSheet.create({
   /* Cards */
   card: {
     backgroundColor: '#fff',
-    borderRadius: 20,
+    borderRadius: 24,
     padding: 24,
-    marginBottom: 16,
+    marginBottom: 20,
     borderWidth: 1,
-    borderColor: '#f3f4f6',
+    borderColor: '#e5e7eb',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 3,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.04,
+    shadowRadius: 10,
+    elevation: 2,
   },
   cardHighlight: {
-    backgroundColor: '#1e40af', // Dark Royal Blue
-    borderColor: '#1e40af',
+    backgroundColor: '#111827', // Dark/Almost Black
+    borderColor: '#111827',
+    shadowColor: '#111827',
+    shadowOpacity: 0.15,
+    shadowRadius: 16,
+    elevation: 8,
+  },
+  cardPremium: {
+    borderColor: '#d1d5db',
+    backgroundColor: '#fafafa',
   },
   popularBadge: {
-    backgroundColor: 'rgba(255,255,255,0.2)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.15)',
     alignSelf: 'flex-start',
     paddingHorizontal: 12,
-    paddingVertical: 4,
+    paddingVertical: 6,
     borderRadius: 20,
-    marginBottom: 10,
+    marginBottom: 16,
   },
-  popularText: { color: '#fff', fontSize: 12, fontWeight: '600' },
+  popularText: {
+    color: '#FBBF24',
+    fontSize: 12,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+  },
 
   currentBadge: {
-    backgroundColor: '#f0fdf4',
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#dcfce7',
     alignSelf: 'flex-start',
     paddingHorizontal: 12,
-    paddingVertical: 4,
+    paddingVertical: 6,
     borderRadius: 20,
-    marginBottom: 10,
+    marginBottom: 16,
   },
-  currentBadgeHighlight: { backgroundColor: 'rgba(255,255,255,0.2)' },
+  currentBadgeHighlight: { backgroundColor: 'rgba(255,255,255,0.15)' },
   currentBadgeText: {
-    color: '#2563EB',
+    color: '#16a34a',
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: '700',
   },
   currentBadgeTextHighlight: { color: '#fff' },
 
   planName: {
-    fontSize: 20,
-    fontWeight: '700',
+    fontSize: 22,
+    fontWeight: '800',
     color: '#111827',
-    marginBottom: 4,
+    marginBottom: 6,
+    letterSpacing: -0.5,
   },
   planNameHighlight: { color: '#fff' },
 
-  priceRow: { flexDirection: 'row', alignItems: 'flex-end', marginBottom: 20 },
+  priceRow: { flexDirection: 'row', alignItems: 'baseline', marginBottom: 16 },
   price: {
-    fontSize: 32,
-    fontWeight: '800',
+    fontSize: 36,
+    fontWeight: '900',
     color: '#111827',
+    letterSpacing: -1,
   },
   priceHighlight: { color: '#fff' },
   priceSub: {
-    fontSize: 14,
-    color: '#9ca3af',
-    marginBottom: 4,
+    fontSize: 15,
+    color: '#6b7280',
+    marginBottom: 6,
     marginLeft: 4,
+    fontWeight: '600',
   },
-  priceSubHighlight: { color: '#bbf7d0' },
+  priceSubHighlight: { color: '#9ca3af' },
 
-  featureList: { marginBottom: 24, gap: 10 },
-  featureRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 },
-  featureText: { fontSize: 14, color: '#4b5563', flex: 1, lineHeight: 20 },
-  featureTextHighlight: { color: '#dcfce7' },
+  divider: {
+    height: 1,
+    backgroundColor: '#f3f4f6',
+    marginBottom: 20,
+  },
+  dividerHighlight: {
+    backgroundColor: '#374151',
+  },
+
+  featureList: { marginBottom: 28, gap: 14 },
+  featureRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  iconCheckbox: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: '#16a34a',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  iconCheckboxHighlight: {
+    backgroundColor: '#fff',
+  },
+  featureText: { fontSize: 15, color: '#374151', flex: 1, fontWeight: '500' },
+  featureTextHighlight: { color: '#e5e7eb' },
 
   activePill: {
     backgroundColor: '#f3f4f6',
-    borderRadius: 100, // Pílula perfeita
-    paddingVertical: 14,
+    borderRadius: 12,
+    paddingVertical: 16,
     alignItems: 'center',
   },
-  activePillHighlight: { backgroundColor: 'rgba(255,255,255,0.2)' },
-  activePillText: { color: '#6b7280', fontSize: 14, fontWeight: '600' },
-  activePillTextHighlight: { color: '#fff' },
+  activePillHighlight: { backgroundColor: '#374151' },
+  activePillText: { color: '#9ca3af', fontSize: 16, fontWeight: '700' },
+  activePillTextHighlight: { color: '#9ca3af' },
 
   btn: {
-    backgroundColor: '#2563EB', // Royal Blue
-    borderRadius: 100, // Pílula perfeita
-    paddingVertical: 14,
+    backgroundColor: '#16a34a',
+    flexDirection: 'row',
+    justifyContent: 'center',
+    borderRadius: 14,
+    paddingVertical: 16,
     alignItems: 'center',
-    shadowColor: '#2563EB',
+    shadowColor: '#16a34a',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 3,
+    shadowOpacity: 0.25,
+    shadowRadius: 10,
+    elevation: 4,
   },
-  btnHighlight: { backgroundColor: '#fff', shadowColor: '#000' },
-  btnText: { color: '#fff', fontSize: 15, fontWeight: '700' },
-  btnTextHighlight: { color: '#2563EB' },
+  btnHighlight: {
+    backgroundColor: '#2563EB', // Royal Blue
+    shadowColor: '#2563EB',
+  },
+  btnText: { color: '#fff', fontSize: 16, fontWeight: '800' },
+  btnTextHighlight: { color: '#fff' },
 
   /* Error */
   errorBox: { alignItems: 'center', marginTop: 60, gap: 12 },

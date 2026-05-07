@@ -349,15 +349,6 @@ export default function ChatScreen() {
             data={[...openSessions, ...closedSessions]}
             keyExtractor={s => s.id}
             contentContainerStyle={styles.listContent}
-            ListHeaderComponent={
-              <TouchableOpacity
-                style={styles.newBtn}
-                onPress={handleNewSession}
-              >
-                <Ionicons name="add-circle" size={20} color="#fff" />
-                <Text style={styles.newBtnText}>Nova conversa</Text>
-              </TouchableOpacity>
-            }
             ListEmptyComponent={
               <View style={styles.emptyBox}>
                 <Ionicons
@@ -439,6 +430,16 @@ export default function ChatScreen() {
             }}
           />
         )}
+
+        {/* FAB: Nova conversa */}
+        <TouchableOpacity
+          style={styles.fab}
+          onPress={handleNewSession}
+          activeOpacity={0.85}
+        >
+          <Ionicons name="chatbubbles" size={24} color="#fff" />
+          <Text style={styles.fabText}>Nova conversa</Text>
+        </TouchableOpacity>
       </View>
     );
   }
@@ -681,28 +682,31 @@ const styles = StyleSheet.create({
   },
   headerSub: { fontSize: 16, color: '#6b7280', marginTop: 4 },
   listContent: { padding: 16, paddingBottom: 110 },
-  newBtn: {
+  fab: {
+    position: 'absolute',
+    bottom: 114,
+    right: 20,
     backgroundColor: '#2563EB', // Royal Blue
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    alignSelf: 'flex-start',
-    paddingHorizontal: 24,
-    borderRadius: 100, // Pílula perfeita
+    paddingHorizontal: 20,
+    borderRadius: 100, // Pílula
     paddingVertical: 14,
-    marginBottom: 20,
-    gap: 8,
+    gap: 6,
+    elevation: 8,
     shadowColor: '#2563EB',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.25,
-    shadowRadius: 16,
-    elevation: 6,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    zIndex: 999,
   },
-  newBtnText: {
+  fabDisabled: { opacity: 0.5 },
+  fabText: {
     color: '#fff',
-    fontSize: 17,
+    fontSize: 16,
     fontWeight: '700',
-    letterSpacing: 0.3,
+    letterSpacing: 0.2,
   },
 
   // UPGRADE WALL
