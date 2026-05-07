@@ -53,19 +53,14 @@ export default function RootNavigator() {
     );
   }
 
-  // Reativo: troca de stack automaticamente quando user muda
-  if (user && !user.onboardingDone) {
-    return (
-      <Stack.Navigator screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="Anamnesis" component={AnamnesisNavigator} />
-      </Stack.Navigator>
-    );
-  }
-
   if (user) {
     return (
-      <Stack.Navigator screenOptions={{ headerShown: false }}>
+      <Stack.Navigator
+        initialRouteName={user.onboardingDone ? 'Main' : 'Anamnesis'}
+        screenOptions={{ headerShown: false }}
+      >
         <Stack.Screen name="Main" component={MainNavigator} />
+        <Stack.Screen name="Anamnesis" component={AnamnesisNavigator} />
         <Stack.Screen name="Plans" component={PlansScreen} />
         <Stack.Screen name="Checkout" component={CheckoutScreen} />
       </Stack.Navigator>

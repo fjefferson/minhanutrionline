@@ -10,7 +10,11 @@ import {
 } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { AnamnesisStackParamList } from '../../navigation/types';
+import type { RouteProp } from '@react-navigation/native';
+import {
+  AnamnesisStackParamList,
+  RootStackParamList,
+} from '../../navigation/types';
 import api from '../../lib/api';
 import { useAuthStore } from '../../store/auth.store';
 
@@ -19,6 +23,7 @@ type Props = {
     AnamnesisStackParamList,
     'AnamnesisPlans'
   >;
+  route: RouteProp<AnamnesisStackParamList, 'AnamnesisPlans'>;
 };
 
 type Plan = {
@@ -40,7 +45,7 @@ const formatPrice = (cents: number) => {
   return `R$ ${(cents / 100).toFixed(2).replace('.', ',')}`;
 };
 
-export default function AnamnesisPlans({ navigation }: Props) {
+export default function AnamnesisPlans({ navigation, route }: Props) {
   const [plans, setPlans] = useState<Plan[]>([]);
   const [subscription, setSubscription] = useState<Subscription | null>(null);
   const [loading, setLoading] = useState(true);
@@ -63,10 +68,17 @@ export default function AnamnesisPlans({ navigation }: Props) {
     setFinishing(true);
     try {
       await api.post('/auth/onboarding-done');
-      setOnboardingDone();
+      await setOnboardingDone();
     } catch {
       // mesmo com erro, finaliza o onboarding localmente
-      setOnboardingDone();
+      await setOnboardingDone();
+    } finally {
+      const rootNavigation =
+        navigation.getParent<NativeStackNavigationProp<RootStackParamList>>();
+      rootNavigation?.navigate('Main', {
+        screen: route.params?.returnTo ?? 'Home',
+      });
+      setFinishing(false);
     }
   };
 

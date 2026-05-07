@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -13,11 +13,20 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import {
+  CompositeNavigationProp,
+  useNavigation,
+} from '@react-navigation/native';
+import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import Ionicons from 'react-native-vector-icons/Ionicons';
-import { LinearGradient } from 'react-native-linear-gradient';
 import Markdown from 'react-native-markdown-display';
 import api from '../../lib/api';
 import { useAuthStore } from '../../store/auth.store';
+import type {
+  MainTabParamList,
+  RootStackParamList,
+} from '../../navigation/types';
 
 /* ─── Types ─────────────────────────────────────────────── */
 interface Symptom {
@@ -37,6 +46,8 @@ interface Report {
 }
 
 type ScreenView = 'history' | 'form' | 'result';
+
+const MIN_NOTES_LENGTH = 10;
 
 /* ─── Greeting helper ────────────────────────────────────── */
 function getGreeting(): string {
@@ -67,7 +78,12 @@ function FreeLimitModal({
   onClose: () => void;
 }) {
   return (
-    <Modal visible={visible} transparent animationType="fade">
+    <Modal
+      visible={visible}
+      transparent
+      animationType="fade"
+      onRequestClose={onClose}
+    >
       <View style={styles.modalOverlay}>
         <View style={styles.modalBox}>
           <View style={styles.modalIconRow}>
@@ -91,12 +107,21 @@ function FreeLimitModal({
 function ProfileGateModal({
   visible,
   onClose,
+  onContinue,
+  onCompleteProfile,
 }: {
   visible: boolean;
   onClose: () => void;
+  onContinue: () => void;
+  onCompleteProfile: () => void;
 }) {
   return (
-    <Modal visible={visible} transparent animationType="fade">
+    <Modal
+      visible={visible}
+      transparent
+      animationType="fade"
+      onRequestClose={onClose}
+    >
       <View style={styles.modalOverlay}>
         <View style={styles.modalBox}>
           <View style={styles.modalIconRow}>
@@ -104,12 +129,25 @@ function ProfileGateModal({
           </View>
           <Text style={styles.modalTitle}>Perfil incompleto</Text>
           <Text style={styles.modalBody}>
-            Preencha seu perfil nutricional (gênero, altura, peso e objetivo)
-            antes de usar as orientações com IA.
+            Você pode preencher seu perfil nutricional para receber orientações
+            mais precisas, mas também pode continuar agora mesmo.
           </Text>
-          <TouchableOpacity style={styles.modalBtn} onPress={onClose}>
-            <Text style={styles.modalBtnText}>Ir para Perfil</Text>
-          </TouchableOpacity>
+          <View style={styles.modalActions}>
+            <TouchableOpacity
+              style={styles.modalSecondaryBtn}
+              onPress={onContinue}
+            >
+              <Text style={styles.modalSecondaryBtnText}>
+                Continuar assim mesmo
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.modalBtn}
+              onPress={onCompleteProfile}
+            >
+              <Text style={styles.modalBtnText}>Completar perfil</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </View>
     </Modal>
@@ -122,6 +160,13 @@ export default function Glp1Screen() {
 }
 
 function Glp1ScreenInner() {
+  const navigation =
+    useNavigation<
+      CompositeNavigationProp<
+        BottomTabNavigationProp<MainTabParamList>,
+        NativeStackNavigationProp<RootStackParamList>
+      >
+    >();
   const { user } = useAuthStore();
   const firstName = user?.name?.split(' ')[0] ?? '';
 
@@ -204,9 +249,22 @@ function Glp1ScreenInner() {
     );
   };
 
+  const handleCompleteProfile = () => {
+    setShowProfileModal(false);
+    navigation.navigate('Anamnesis', { returnTo: 'Glp1' });
+  };
+
+  const trimmedNotes = notes.trim();
+  const canSubmitForm =
+    selected.length > 0 && trimmedNotes.length >= MIN_NOTES_LENGTH;
+
   const handleSubmit = async () => {
     if (selected.length === 0) {
       setFormError('Selecione ao menos um sintoma.');
+      return;
+    }
+    if (trimmedNotes.length < MIN_NOTES_LENGTH) {
+      setFormError('Descreva brevemente o que você está sentindo.');
       return;
     }
     setFormError('');
@@ -216,7 +274,7 @@ function Glp1ScreenInner() {
         '/glp1/report',
         {
           symptoms: selected,
-          extraNotes: notes,
+          extraNotes: trimmedNotes,
         },
         { timeout: 90000 },
       ); // IA pode demorar até ~60s
@@ -297,6 +355,8 @@ function Glp1ScreenInner() {
         <ProfileGateModal
           visible={showProfileModal}
           onClose={() => setShowProfileModal(false)}
+          onContinue={goToForm}
+          onCompleteProfile={handleCompleteProfile}
         />
 
         <ScrollView
@@ -353,10 +413,6 @@ function Glp1ScreenInner() {
                 ? [...currSlugs].filter(s => !prevSlugs.has(s))
                 : [];
 
-              const timeStr = new Date(report.createdAt).toLocaleTimeString(
-                'pt-BR',
-                { hour: '2-digit', minute: '2-digit' },
-              );
               const dateStr = new Date(report.createdAt).toLocaleDateString(
                 'pt-BR',
                 { day: '2-digit', month: 'short', year: 'numeric' },
@@ -627,7 +683,12 @@ function Glp1ScreenInner() {
             placeholder="Ex: sinto mais após as refeições, há 3 dias, piora à noite..."
             placeholderTextColor="#9ca3af"
             value={notes}
-            onChangeText={setNotes}
+            onChangeText={value => {
+              setNotes(value);
+              if (formError) {
+                setFormError('');
+              }
+            }}
             multiline
             numberOfLines={4}
             textAlignVertical="top"
@@ -636,9 +697,12 @@ function Glp1ScreenInner() {
           {!!formError && <Text style={styles.errorText}>{formError}</Text>}
 
           <TouchableOpacity
-            style={[styles.submitBtn, submitting && styles.submitBtnDisabled]}
+            style={[
+              styles.submitBtn,
+              (!canSubmitForm || submitting) && styles.submitBtnDisabled,
+            ]}
             onPress={handleSubmit}
-            disabled={submitting}
+            disabled={!canSubmitForm || submitting}
           >
             {submitting ? (
               <>
@@ -1359,12 +1423,35 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 21,
   },
+  modalActions: {
+    width: '100%',
+    gap: 10,
+    marginTop: 4,
+  },
+  modalSecondaryBtn: {
+    borderWidth: 1,
+    borderColor: '#d1d5db',
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    backgroundColor: '#fff',
+  },
+  modalSecondaryBtnText: {
+    color: '#374151',
+    fontWeight: '700',
+    fontSize: 15,
+    textAlign: 'center',
+  },
   modalBtn: {
     backgroundColor: '#16a34a',
     borderRadius: 12,
     paddingVertical: 12,
     paddingHorizontal: 32,
-    marginTop: 4,
   },
-  modalBtnText: { color: '#fff', fontWeight: '700', fontSize: 15 },
+  modalBtnText: {
+    color: '#fff',
+    fontWeight: '700',
+    fontSize: 15,
+    textAlign: 'center',
+  },
 });
