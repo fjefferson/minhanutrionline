@@ -73,9 +73,11 @@ function stripMd(text: string, maxLen = 110): string {
 function FreeLimitModal({
   visible,
   onClose,
+  onGoToPlans,
 }: {
   visible: boolean;
   onClose: () => void;
+  onGoToPlans: () => void;
 }) {
   return (
     <Modal
@@ -94,9 +96,17 @@ function FreeLimitModal({
             Você usou todas as 3 orientações gratuitas com IA. Assine um plano
             para orientações ilimitadas.
           </Text>
-          <TouchableOpacity style={styles.modalBtn} onPress={onClose}>
-            <Text style={styles.modalBtnText}>Entendido</Text>
-          </TouchableOpacity>
+          <View style={styles.modalActions}>
+            <TouchableOpacity
+              style={styles.modalSecondaryBtn}
+              onPress={onClose}
+            >
+              <Text style={styles.modalSecondaryBtnText}>Entendi</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.modalBtn} onPress={onGoToPlans}>
+              <Text style={styles.modalBtnText}>Assinar plano</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </View>
     </Modal>
@@ -262,6 +272,11 @@ function Glp1ScreenInner() {
     navigation.navigate('Anamnesis', { returnTo: 'Glp1' });
   };
 
+  const handleGoToPlans = () => {
+    setShowFreeLimitModal(false);
+    navigation.navigate('Plans');
+  };
+
   const trimmedNotes = notes.trim();
   const canSubmitForm =
     selected.length > 0 && trimmedNotes.length >= MIN_NOTES_LENGTH;
@@ -360,6 +375,7 @@ function Glp1ScreenInner() {
         <FreeLimitModal
           visible={showFreeLimitModal && view === 'history'}
           onClose={() => setShowFreeLimitModal(false)}
+          onGoToPlans={handleGoToPlans}
         />
         <ProfileGateModal
           visible={showProfileModal}
