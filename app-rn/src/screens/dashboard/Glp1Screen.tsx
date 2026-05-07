@@ -938,7 +938,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   backBtnText: { color: '#4b5563', fontSize: 15, fontWeight: '500' },
-  scroll: { padding: 16, paddingBottom: 40 },
+  scroll: { padding: 16, paddingBottom: 110 },
 
   freeCounter: {
     flexDirection: 'row',

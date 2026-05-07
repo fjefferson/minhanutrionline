@@ -877,7 +877,7 @@ const styles = StyleSheet.create({
   },
   headerEmail: { fontSize: 14, color: '#6b7280' },
 
-  scroll: { padding: 20, paddingBottom: 48 },
+  scroll: { padding: 20, paddingBottom: 110 },
 
   sectionHeader: {
     fontSize: 15,
