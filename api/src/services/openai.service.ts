@@ -131,10 +131,15 @@ export async function generateNutritionalGuidance(
   const profileContext = profile ? buildProfileContext(profile) : null;
 
   const systemPrompt = `Você é uma nutricionista especializada em pacientes em uso de medicamentos GLP-1 (como semaglutida e liraglutida) para emagrecimento.
-Seu papel é fornecer orientações nutricionais personalizadas, empáticas e baseadas em evidências para os sintomas relatados pelo paciente.
-Use a base de conhecimento fornecida como referência principal. Seja objetiva, prática e humanizada.
-Nunca substitua o acompanhamento médico — sempre incentive o paciente a manter contato com seu médico prescritor.
-Responda sempre em português do Brasil.${patientName ? `\nSempre chame o paciente pelo primeiro nome ("${patientName.split(" ")[0]}") ao longo da resposta — no início e quando fizer sentido no contexto.` : ""}`;
+Seu papel é fornecer orientações nutricionais personalizadas, empáticas e baseadas nos conteúdos da base de conhecimento fornecida.
+Seja objetiva, prática e humanizada. Nunca substitua o acompanhamento médico — sempre incentive o paciente a manter contato com seu médico prescritor.
+Responda sempre em português do Brasil.${patientName ? `\nSempre chame o paciente pelo primeiro nome ("${patientName.split(" ")[0]}") ao longo da resposta — no início e quando fizer sentido no contexto.` : ""}
+
+REGRA ABSOLUTA — SIGA SEM EXCEÇÃO:
+- Você SOMENTE pode orientar com base nos conteúdos presentes na seção "Base de conhecimento" abaixo.
+- Se a base de conhecimento estiver vazia ou não contiver informações específicas sobre os sintomas relatados, você NÃO deve inventar, deduzir ou criar orientações próprias.
+- Nesse caso, responda de forma empática informando que a base de conhecimento ainda está sendo alimentada para esse tema e oriente o paciente a entrar em contato diretamente com a nutricionista pelo chat.
+- É estritamente proibido gerar listas de alimentos, planos alimentares, dicas nutricionais ou qualquer orientação técnica que não esteja explicitamente presente na base de conhecimento fornecida.`;
 
   const historyContext =
     symptomHistory && symptomHistory.length > 0
@@ -154,12 +159,16 @@ Responda sempre em português do Brasil.${patientName ? `\nSempre chame o pacien
 Sintomas: ${symptoms.length > 0 ? symptoms.join(", ") : "nenhum sintoma específico marcado"}
 ${extraNotes ? `Observações adicionais: ${extraNotes}` : ""}
 ${historyContext}
-Base de conhecimento nutricional relevante:
+Base de conhecimento:
 ---
-${knowledgeContext || "Nenhum conteúdo específico encontrado para estes sintomas."}
+${knowledgeContext || "VAZIO — nenhum conteúdo cadastrado para estes sintomas."}
 ---
 
-Com base nesses sintomas${profileContext ? ", no perfil do paciente" : ""}${symptomHistory && symptomHistory.length > 0 ? ", no histórico de consultas" : ""} e na base de conhecimento acima, forneça orientações nutricionais práticas e personalizadas para este paciente.`;
+${
+  knowledgeContext
+    ? `Com base EXCLUSIVAMENTE nos conteúdos acima${profileContext ? ", no perfil do paciente" : ""}${symptomHistory && symptomHistory.length > 0 ? " e no histórico de consultas" : ""}, forneça orientações nutricionais práticas e personalizadas para este paciente. Não adicione informações além do que está na base de conhecimento.`
+    : "A base de conhecimento está VAZIA para estes sintomas. Siga a REGRA ABSOLUTA: não invente orientações. Informe ao paciente que a base de conhecimento ainda está sendo alimentada para esse tema e oriente-o a entrar em contato com a nutricionista pelo chat."
+}`;
 
   const response = await client.chat.completions.create({
     model: MODEL,

@@ -17,3 +17,4 @@ export const OPENAI_API_KEY = process.env.OPENAI_API_KEY ?? "";
 export const ASAAS_API_KEY = process.env.ASAAS_API_KEY ?? "";
 export const ASAAS_BASE_URL =
   process.env.ASAAS_BASE_URL ?? "https://sandbox.asaas.com/api/v3";
+export const ASAAS_WEBHOOK_TOKEN = process.env.ASAAS_WEBHOOK_TOKEN ?? "";

@@ -21,24 +21,7 @@ export async function getProfile(req: AuthenticatedRequest, res: Response) {
 export async function upsertProfile(req: AuthenticatedRequest, res: Response) {
   const userId = req.user!.userId;
 
-  const {
-    birthDate,
-    gender,
-    heightCm,
-    weightKg,
-    goal,
-    activityLevel,
-    glp1Medication,
-    glp1StartDate,
-    dietType,
-    allergies,
-    intolerances,
-    medicalConditions,
-    otherMedications,
-    mealFrequency,
-    foodDislikes,
-    occupation,
-  } = req.body as {
+  const body = req.body as {
     birthDate?: string;
     gender?: Gender;
     heightCm?: number;
@@ -57,24 +40,30 @@ export async function upsertProfile(req: AuthenticatedRequest, res: Response) {
     occupation?: string;
   };
 
-  const data = {
-    birthDate: birthDate ? new Date(birthDate) : null,
-    gender: gender ?? null,
-    heightCm: heightCm ?? null,
-    weightKg: weightKg ?? null,
-    goal: goal ?? null,
-    activityLevel: activityLevel ?? null,
-    glp1Medication: glp1Medication ?? null,
-    glp1StartDate: glp1StartDate ? new Date(glp1StartDate) : null,
-    dietType: dietType ?? null,
-    allergies: allergies ?? null,
-    intolerances: intolerances ?? null,
-    medicalConditions: medicalConditions ?? null,
-    otherMedications: otherMedications ?? null,
-    mealFrequency: mealFrequency ?? null,
-    foodDislikes: foodDislikes ?? null,
-    occupation: occupation ?? null,
-  };
+  const data: Record<string, unknown> = {};
+  if ("birthDate" in body)
+    data.birthDate = body.birthDate ? new Date(body.birthDate) : null;
+  if ("gender" in body) data.gender = body.gender ?? null;
+  if ("heightCm" in body) data.heightCm = body.heightCm ?? null;
+  if ("weightKg" in body) data.weightKg = body.weightKg ?? null;
+  if ("goal" in body) data.goal = body.goal ?? null;
+  if ("activityLevel" in body) data.activityLevel = body.activityLevel ?? null;
+  if ("glp1Medication" in body)
+    data.glp1Medication = body.glp1Medication ?? null;
+  if ("glp1StartDate" in body)
+    data.glp1StartDate = body.glp1StartDate
+      ? new Date(body.glp1StartDate)
+      : null;
+  if ("dietType" in body) data.dietType = body.dietType ?? null;
+  if ("allergies" in body) data.allergies = body.allergies ?? null;
+  if ("intolerances" in body) data.intolerances = body.intolerances ?? null;
+  if ("medicalConditions" in body)
+    data.medicalConditions = body.medicalConditions ?? null;
+  if ("otherMedications" in body)
+    data.otherMedications = body.otherMedications ?? null;
+  if ("mealFrequency" in body) data.mealFrequency = body.mealFrequency ?? null;
+  if ("foodDislikes" in body) data.foodDislikes = body.foodDislikes ?? null;
+  if ("occupation" in body) data.occupation = body.occupation ?? null;
 
   const profile = await prisma.nutritionalProfile.upsert({
     where: { userId },

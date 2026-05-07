@@ -40,10 +40,16 @@ interface Report {
 
 type View = "history" | "form" | "result";
 
-function FreeLimitModal() {
+function FreeLimitModal({ onClose }: { onClose: () => void }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden relative">
+        <button
+          onClick={onClose}
+          className="absolute top-4 right-4 text-white/80 hover:text-white"
+        >
+          ✕
+        </button>
         <div className="bg-linear-to-br from-green-600 to-emerald-700 p-7 text-center">
           <div className="w-14 h-14 rounded-full bg-white/20 flex items-center justify-center mx-auto mb-3">
             <Sparkles className="w-7 h-7 text-white" />
@@ -95,10 +101,16 @@ function FreeLimitModal() {
   );
 }
 
-function ProfileGateModal() {
+function ProfileGateModal({ onClose }: { onClose: () => void }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-8 flex flex-col items-center gap-5 text-center">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-8 flex flex-col items-center gap-5 text-center relative">
+        <button
+          onClick={onClose}
+          className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"
+        >
+          ✕
+        </button>
         <div className="w-14 h-14 rounded-full bg-amber-100 flex items-center justify-center">
           <UserCircle className="w-7 h-7 text-amber-600" />
         </div>
@@ -126,8 +138,11 @@ export default function Glp1Page() {
   const [loadingHistory, setLoadingHistory] = useState(true);
   const [symptoms, setSymptoms] = useState<Symptom[]>([]);
   const [profileBlocked, setProfileBlocked] = useState(false);
+  const [showProfileModal, setShowProfileModal] = useState(false);
   const [profileChecked, setProfileChecked] = useState(false);
+
   const [freeLimitReached, setFreeLimitReached] = useState(false);
+  const [showFreeLimitModal, setShowFreeLimitModal] = useState(false);
   const [freeAiUsed, setFreeAiUsed] = useState(0);
   const [freeAiLimit] = useState(3);
   const [hasActivePlan, setHasActivePlan] = useState(false);
@@ -156,6 +171,13 @@ export default function Glp1Page() {
       .finally(() => setLoadingHistory(false));
   };
 
+  const loadSymptoms = () => {
+    api
+      .get("/glp1/symptoms")
+      .then((r) => setSymptoms(r.data))
+      .catch(() => {});
+  };
+
   const loadFreeStatus = () => {
     api
       .get("/glp1/free-status")
@@ -173,10 +195,7 @@ export default function Glp1Page() {
   useEffect(() => {
     loadHistory();
     loadFreeStatus();
-    api
-      .get("/glp1/symptoms")
-      .then((r) => setSymptoms(r.data))
-      .catch(() => {});
+    loadSymptoms();
     api
       .get("/profile/nutritional")
       .then((r) => {
@@ -195,6 +214,7 @@ export default function Glp1Page() {
     );
 
   const openForm = () => {
+    loadSymptoms();
     setSelected([]);
     setNotes("");
     setFormError("");
@@ -223,6 +243,7 @@ export default function Glp1Page() {
     } catch (err: any) {
       if (err?.response?.data?.code === "FREE_LIMIT_REACHED") {
         setFreeLimitReached(true);
+        setShowFreeLimitModal(true);
         setFreeAiUsed(err.response.data.freeAiUsed);
         setView("history");
       } else {
@@ -670,8 +691,12 @@ export default function Glp1Page() {
   /* ── HISTORY VIEW (default) ── */
   return (
     <div className="max-w-3xl">
-      {freeStatusChecked && freeLimitReached && <FreeLimitModal />}
-      {profileChecked && profileBlocked && <ProfileGateModal />}
+      {freeStatusChecked && showFreeLimitModal && (
+        <FreeLimitModal onClose={() => setShowFreeLimitModal(false)} />
+      )}
+      {profileChecked && showProfileModal && (
+        <ProfileGateModal onClose={() => setShowProfileModal(false)} />
+      )}
 
       {/* Contador de créditos gratuitos */}
       {freeStatusChecked && !hasActivePlan && !freeLimitReached && (
@@ -716,7 +741,17 @@ export default function Glp1Page() {
           </p>
         </div>
         <button
-          onClick={openForm}
+          onClick={() => {
+            if (profileBlocked) {
+              setShowProfileModal(true);
+              return;
+            }
+            if (freeLimitReached) {
+              setShowFreeLimitModal(true);
+              return;
+            }
+            openForm();
+          }}
           className="flex items-center gap-2 bg-green-600 text-white px-4 py-2.5 rounded-xl text-sm font-semibold hover:bg-green-700 transition shrink-0"
         >
           <Plus className="w-4 h-4" />
@@ -734,7 +769,17 @@ export default function Glp1Page() {
             Você ainda não tem nenhuma orientação.
           </p>
           <button
-            onClick={openForm}
+            onClick={() => {
+              if (profileBlocked) {
+                setShowProfileModal(true);
+                return;
+              }
+              if (freeLimitReached) {
+                setShowFreeLimitModal(true);
+                return;
+              }
+              openForm();
+            }}
             className="inline-flex items-center gap-2 bg-green-600 text-white px-5 py-2.5 rounded-xl text-sm font-semibold hover:bg-green-700 transition"
           >
             <Plus className="w-4 h-4" />

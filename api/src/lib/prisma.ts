@@ -5,6 +5,7 @@ import { DATABASE_URL } from "../config/env";
 const globalForPrisma = globalThis as unknown as { prisma: PrismaClient };
 
 function normalizeDbUrl(url: string): string {
+  if (process.env.NODE_ENV !== "production") return url;
   const u = new URL(url);
   if (!u.searchParams.has("sslmode")) {
     u.searchParams.set("sslmode", "verify-full");

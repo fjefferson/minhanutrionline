@@ -123,11 +123,12 @@ export const getEligibility = async (
     }
   }
 
-  // canBook: user can always initiate a booking; earliestDate is the minimum selectable date
-  // (isBeforeEarliestDate on the frontend handles blocking past-grace/gap dates in the calendar)
+  // canBook: true only when the user is already past both grace and gap periods
+  const todayDateStr = toBrazilDateStr(brazilTodayUTCMidnight());
+  const earliestDateStr = earliestDate.toISOString().slice(0, 10);
   return res.json({
-    canBook: true,
-    earliestDate: earliestDate.toISOString().slice(0, 10),
+    canBook: earliestDateStr <= todayDateStr,
+    earliestDate: earliestDateStr,
     reason,
   });
 };

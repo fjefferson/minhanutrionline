@@ -113,6 +113,7 @@ export const login = async (req: Request, res: Response): Promise<void> => {
       role: user.role,
       avatarUrl: user.avatarUrl ?? null,
       emailVerified: user.emailVerified,
+      onboardingDone: user.onboardingDone,
       subscription: user.subscription
         ? {
             status: user.subscription.status,

@@ -9,12 +9,29 @@ const api = axios.create({
 export async function findOrCreateCustomer(
   email: string,
   name: string,
+  cpfCnpj?: string,
 ): Promise<string> {
   const search = await api.get(`/customers?email=${encodeURIComponent(email)}`);
   const existing = search.data?.data?.[0];
-  if (existing) return existing.id as string;
 
-  const created = await api.post("/customers", { name, email });
+  if (existing) {
+    // Atualiza CPF/CNPJ se ainda não estiver cadastrado
+    if (cpfCnpj && !existing.cpfCnpj) {
+      try {
+        await api.put(`/customers/${existing.id}`, { cpfCnpj });
+      } catch (err: any) {
+        console.warn(
+          "Aviso: não foi possível atualizar CPF do cliente:",
+          err?.response?.data ?? err?.message,
+        );
+      }
+    }
+    return existing.id as string;
+  }
+
+  const payload: Record<string, string> = { name, email };
+  if (cpfCnpj) payload.cpfCnpj = cpfCnpj;
+  const created = await api.post("/customers", payload);
   return created.data.id as string;
 }
 
@@ -31,10 +48,16 @@ export async function createAsaasSubscription(
 ): Promise<{ id: string; paymentUrl: string }> {
   const nextDueDate = new Date().toISOString().split("T")[0];
 
+  // Se há valor proporcional, cria a assinatura já com esse valor.
+  // O Asaas gera o invoice/PIX com o valor de criação — atualizar depois
+  // não altera o link já gerado. Após confirmação do pagamento, o controlador
+  // atualiza a assinatura para o valor cheio (ciclos futuros).
+  const billingValue = input.firstPaymentAmountBRL ?? input.amountBRL;
+
   const sub = await api.post("/subscriptions", {
     customer: input.customerId,
-    billingType: "CREDIT_CARD",
-    value: input.amountBRL,
+    billingType: "UNDEFINED",
+    value: billingValue,
     nextDueDate,
     cycle: "MONTHLY",
     description: input.planName,
@@ -43,32 +66,28 @@ export async function createAsaasSubscription(
 
   const subId: string = sub.data.id;
 
-  // Pega a primeira cobrança gerada para obter o link de pagamento hosted
-  const payments = await api.get(`/subscriptions/${subId}/payments`);
-  const firstPayment = payments.data?.data?.[0];
+  // Asaas pode demorar alguns milissegundos para gerar a primeira cobrança
+  // Tenta até 5x com espera de 800ms entre tentativas
+  let firstPayment: any = null;
+  for (let attempt = 0; attempt < 5; attempt++) {
+    if (attempt > 0) await new Promise((r) => setTimeout(r, 800));
+    const payments = await api.get(`/subscriptions/${subId}/payments`);
+    firstPayment = payments.data?.data?.[0];
+    if (firstPayment?.invoiceUrl || firstPayment?.bankSlipUrl) break;
+  }
+
   const paymentUrl: string =
     firstPayment?.invoiceUrl ?? firstPayment?.bankSlipUrl ?? "";
 
-  // Se valor proporcional foi informado, atualiza o 1º pagamento antes de ser pago
-  if (
-    firstPayment?.id &&
-    input.firstPaymentAmountBRL !== undefined &&
-    Math.abs(input.firstPaymentAmountBRL - input.amountBRL) > 0.01
-  ) {
-    try {
-      await api.put(`/payments/${firstPayment.id}`, {
-        value: input.firstPaymentAmountBRL,
-      });
-    } catch (err: any) {
-      console.warn(
-        "Aviso: não foi possível aplicar desconto proporcional no 1º pagamento:",
-        err?.response?.data ?? err?.message,
-      );
-      // Não bloqueia o fluxo — continua com o valor cheio
-    }
-  }
-
   return { id: subId, paymentUrl };
+}
+
+// Atualiza o valor recorrente de uma assinatura Asaas (usado após o 1º pagamento proporcional)
+export async function updateAsaasSubscriptionValue(
+  subscriptionId: string,
+  value: number,
+): Promise<void> {
+  await api.put(`/subscriptions/${subscriptionId}`, { value });
 }
 
 export async function getAsaasSubscription(id: string) {

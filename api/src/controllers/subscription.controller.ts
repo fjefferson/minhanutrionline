@@ -5,13 +5,18 @@ import {
   createAsaasSubscription,
   getAsaasSubscriptionPaymentStatus,
   cancelAsaasSubscription,
+  updateAsaasSubscriptionValue,
 } from "../services/asaas.service";
 import { AuthenticatedRequest } from "../middlewares/auth.middleware";
 import { sendWelcomeEmail } from "../services/sendpulse.service";
+import { ASAAS_WEBHOOK_TOKEN } from "../config/env";
 
 // POST /subscriptions/checkout
 export async function checkout(req: Request, res: Response) {
-  const { planType } = req.body as { planType: string };
+  const { planType, cpfCnpj } = req.body as {
+    planType: string;
+    cpfCnpj?: string;
+  };
   const user = (req as AuthenticatedRequest).user!;
 
   const validTypes = ["BASIC", "PLUS", "PREMIUM"];
@@ -39,6 +44,7 @@ export async function checkout(req: Request, res: Response) {
     const customerId = await findOrCreateCustomer(
       user.email,
       dbUser?.name ?? user.email,
+      cpfCnpj,
     );
     const asaasSub = await createAsaasSubscription({
       customerId,
@@ -96,6 +102,14 @@ export async function getMySubscription(req: Request, res: Response) {
       );
       if (asaasStatus === "ACTIVE") {
         const now = new Date();
+
+        // Busca o plano alvo para saber o preço cheio (necessário no upgrade)
+        const targetPlanId = sub.pendingPlanId ?? sub.planId;
+        const targetPlan = await prisma.plan.findUnique({
+          where: { id: targetPlanId },
+          select: { priceInCents: true },
+        });
+
         const updated = await prisma.subscription.update({
           where: { id: sub.id },
           data: {
@@ -110,6 +124,20 @@ export async function getMySubscription(req: Request, res: Response) {
           },
           include: { plan: true },
         });
+
+        // Se foi criada com valor proporcional (upgrade), corrige o valor recorrente no Asaas
+        if (targetPlan && sub.mpSubscriptionId) {
+          updateAsaasSubscriptionValue(
+            sub.mpSubscriptionId,
+            targetPlan.priceInCents / 100,
+          ).catch((err) =>
+            console.warn(
+              "Aviso: não foi possível atualizar valor recorrente no Asaas:",
+              err?.message,
+            ),
+          );
+        }
+
         {
           const dbUser = await prisma.user.findUnique({
             where: { id: user.userId },
@@ -148,7 +176,10 @@ export async function getMySubscription(req: Request, res: Response) {
 
 // POST /subscriptions/upgrade
 export async function upgradeSubscription(req: Request, res: Response) {
-  const { planType } = req.body as { planType: string };
+  const { planType, cpfCnpj } = req.body as {
+    planType: string;
+    cpfCnpj?: string;
+  };
   const user = (req as AuthenticatedRequest).user!;
 
   const validTypes = ["BASIC", "PLUS", "PREMIUM"];
@@ -234,6 +265,7 @@ export async function upgradeSubscription(req: Request, res: Response) {
     const customerId = await findOrCreateCustomer(
       user.email,
       dbUser?.name ?? user.email,
+      cpfCnpj,
     );
     const asaasSub = await createAsaasSubscription({
       customerId,
@@ -314,6 +346,15 @@ export async function cancelSubscription(req: Request, res: Response) {
 
 // POST /webhooks/asaas (public)
 export async function asaasWebhook(req: Request, res: Response) {
+  // Valida token de segurança configurado na plataforma Asaas
+  if (ASAAS_WEBHOOK_TOKEN) {
+    const incomingToken = req.headers["asaas-access-token"];
+    if (incomingToken !== ASAAS_WEBHOOK_TOKEN) {
+      res.sendStatus(401);
+      return;
+    }
+  }
+
   const body = req.body as {
     event: string;
     payment?: { subscription?: string; status?: string };
