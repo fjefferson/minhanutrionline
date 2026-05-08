@@ -7,7 +7,7 @@ import {
   DietType,
 } from "@prisma/client";
 
-const MODEL = "gpt-4o-mini";
+const MODEL = "gpt-5.4-mini";
 
 const client = new OpenAI({ apiKey: OPENAI_API_KEY });
 
@@ -177,7 +177,7 @@ ${
       { role: "user", content: userPrompt },
     ],
     temperature: 0.7,
-    max_tokens: 800,
+    max_completion_tokens: 800,
   });
 
   return (

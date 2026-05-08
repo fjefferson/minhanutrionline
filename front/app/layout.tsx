@@ -8,6 +8,7 @@ import "./globals.css";
 const inter = Inter({ subsets: ["latin"] });
 
 const SITE_URL = "https://minhanutrionline.com.br";
+const isProduction = process.env.NODE_ENV === "production";
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
@@ -101,19 +102,23 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="pt-BR" className="h-full">
-      <Script
-        async
-        src="https://www.googletagmanager.com/gtag/js?id=G-BL11SHHS3J"
-        strategy="afterInteractive"
-      />
-      <Script id="google-analytics" strategy="afterInteractive">
-        {`
-          window.dataLayer = window.dataLayer || [];
-          function gtag(){dataLayer.push(arguments);}
-          gtag('js', new Date());
-          gtag('config', 'G-BL11SHHS3J');
-        `}
-      </Script>
+      {isProduction ? (
+        <>
+          <Script
+            async
+            src="https://www.googletagmanager.com/gtag/js?id=G-BL11SHHS3J"
+            strategy="afterInteractive"
+          />
+          <Script id="google-analytics" strategy="afterInteractive">
+            {`
+              window.dataLayer = window.dataLayer || [];
+              function gtag(){dataLayer.push(arguments);}
+              gtag('js', new Date());
+              gtag('config', 'G-BL11SHHS3J');
+            `}
+          </Script>
+        </>
+      ) : null}
       <body
         suppressHydrationWarning
         className={`${inter.className} min-h-full bg-gray-50 antialiased`}
