@@ -89,6 +89,8 @@ model User {
   consultations      Consultation[]
   materialReactions  MaterialReaction[]
   materialComments   MaterialComment[]
+  glp1DosageLogs     Glp1DosageLog[]
+  progressEntries    ProgressEntry[]
 }
 
 model NutritionalProfile {
@@ -357,4 +359,40 @@ model MaterialComment {
 
   material Material @relation(fields: [materialId], references: [id], onDelete: Cascade)
   user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+/// Histórico de mudanças de dosagem GLP-1 do paciente
+model Glp1DosageLog {
+  id                 String    @id @default(cuid())
+  userId             String
+  medication         String
+  doseMg             Float?     /// dose em mg (ex: 0.5, 1.0, 2.0)
+  startDate          DateTime
+  endDate            DateTime?  /// null = dose atual em uso
+  changeReason       String?    /// motivo da mudança
+  prescribedBy       String?    /// nome do médico prescritor
+  nextChangePlanned  DateTime?  /// data prevista para próxima troca
+  toleranceNotes     String?    /// notas sobre tolerância/efeitos colaterais
+  createdAt          DateTime   @default(now())
+  updatedAt          DateTime   @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+/// Registro de medidas corporais do paciente (evolução de peso)
+model ProgressEntry {
+  id                       String    @id @default(cuid())
+  userId                   String
+  recordedAt               DateTime  /// data da medição (informada pelo paciente)
+  weightKg                 Float?
+  waistCm                  Float?
+  bodyFatPct               Float?
+  bloodPressureSystolic    Int?      /// ex: 120
+  bloodPressureDiastolic   Int?      /// ex: 80
+  notes                    String?
+  createdAt                DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, recordedAt])
 }

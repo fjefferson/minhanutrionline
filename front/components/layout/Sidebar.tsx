@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useAuthStore } from "@/store/auth.store";
 import { useEffect, useState } from "react";
 import api from "@/lib/api";
@@ -26,6 +26,9 @@ import {
   X,
   ArrowUpRight,
   FolderOpen,
+  TrendingDown,
+  LineChart,
+  Syringe,
   LucideIcon,
 } from "lucide-react";
 
@@ -34,6 +37,10 @@ interface NavItem {
   label: string;
   icon: LucideIcon;
   minPlan?: string;
+  /** quando presente, item só fica ativo se o param ?tab=activeTab estiver na URL */
+  activeTab?: string;
+  /** quando presente, item fica ativo apenas se ?tab=activeTab NÃO estiver presente */
+  inactiveTab?: string;
 }
 
 interface NavSection {
@@ -45,7 +52,25 @@ const userSections: NavSection[] = [
   {
     items: [
       { href: "/dashboard", label: "Início", icon: LayoutDashboard },
-      { href: "/glp1", label: "Consultar Sintomas", icon: Pill },
+      {
+        href: "/glp1",
+        label: "Consultar Sintomas",
+        icon: Pill,
+        inactiveTab: "dosagem",
+      },
+      {
+        href: "/glp1?tab=dosagem",
+        label: "Doses GLP-1",
+        icon: Syringe,
+        activeTab: "dosagem",
+      },
+    ],
+  },
+  {
+    label: "MEU PROGRESSO",
+    items: [
+      { href: "/progresso", label: "Minha Evolução", icon: TrendingDown },
+      { href: "/relatorios", label: "Meus Relatórios", icon: LineChart },
     ],
   },
   {
@@ -127,6 +152,7 @@ const PLAN_COLOR: Record<string, string> = {
 
 export default function Sidebar() {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const router = useRouter();
   const { user, logout, planType, hasActivePlan } = useAuthStore();
   const [profileIncomplete, setProfileIncomplete] = useState(false);
@@ -217,11 +243,20 @@ export default function Sidebar() {
                     ? planHierarchy[plan] < planHierarchy[item.minPlan]
                     : !!item.minPlan && !plan;
 
-                const isActive =
-                  pathname === item.href ||
-                  (item.href.length > 1 &&
-                    item.href !== "/admin" &&
-                    pathname.startsWith(item.href + "/"));
+                const pathForActive = item.href.split("?")[0];
+                const currentTab = searchParams.get("tab") ?? "";
+                const baseMatch =
+                  pathname === pathForActive ||
+                  (pathForActive.length > 1 &&
+                    pathForActive !== "/admin" &&
+                    pathname.startsWith(pathForActive + "/"));
+                const isActive = baseMatch
+                  ? item.activeTab
+                    ? currentTab === item.activeTab
+                    : item.inactiveTab
+                      ? currentTab !== item.inactiveTab
+                      : true
+                  : false;
 
                 const Icon = item.icon;
 

@@ -9,6 +9,7 @@ import profileRoutes from "./profile.routes";
 import consultationRoutes from "./consultation.routes";
 import materialRoutes from "./material.routes";
 import contactRoutes from "./contact.routes";
+import progressRoutes from "./progress.routes";
 import { getPlans, getPublicPlans } from "../controllers/admin.controller";
 
 const router = Router();
@@ -23,6 +24,7 @@ router.use("/profile", profileRoutes);
 router.use("/consultations", consultationRoutes);
 router.use("/materials", materialRoutes);
 router.use("/contact", contactRoutes);
+router.use("/progress", progressRoutes);
 router.get("/plans", getPlans);
 router.get("/plans/public", getPublicPlans);
 

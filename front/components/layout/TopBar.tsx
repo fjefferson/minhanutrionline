@@ -1,6 +1,6 @@
 "use client";
 
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { useAuthStore } from "@/store/auth.store";
 import Link from "next/link";
 import Image from "next/image";
@@ -9,6 +9,9 @@ import { Bell } from "lucide-react";
 const PAGE_TITLES: Record<string, string> = {
   "/dashboard": "Dashboard",
   "/glp1": "Consultar Sintomas",
+  "/glp1?tab=dosagem": "Doses GLP-1",
+  "/progresso": "Minha Evolução",
+  "/relatorios": "Meus Relatórios",
   "/chat": "Chat com Nutri",
   "/perfil": "Meu Perfil",
   "/consultas": "Consultas",
@@ -28,13 +31,19 @@ const PAGE_TITLES: Record<string, string> = {
 
 export default function TopBar() {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const { user } = useAuthStore();
+
+  const fullKey = searchParams.toString()
+    ? `${pathname}?${searchParams.toString()}`
+    : pathname;
 
   const title =
     Object.entries(PAGE_TITLES)
       .sort((a, b) => b[0].length - a[0].length)
       .find(
-        ([key]) => pathname === key || pathname.startsWith(key + "/"),
+        ([key]) =>
+          fullKey === key || pathname === key || pathname.startsWith(key + "/"),
       )?.[1] ?? "Dashboard";
 
   const today = new Date().toLocaleDateString("pt-BR", {

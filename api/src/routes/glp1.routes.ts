@@ -8,6 +8,12 @@ import {
   requestReview,
   getFreeStatus,
 } from "../controllers/glp1.controller";
+import {
+  getDosageHistory,
+  createDosageChange,
+  updateDosageChange,
+  deleteDosageChange,
+} from "../controllers/glp1Dosage.controller";
 
 const router = Router();
 
@@ -19,5 +25,10 @@ router.post("/report", createReport);
 router.get("/reports", getReports);
 router.patch("/report/:id/helpful", rateReport);
 router.post("/report/:id/review", requestReview);
+
+router.get("/dosage-history", getDosageHistory);
+router.post("/dosage-change", createDosageChange);
+router.patch("/dosage-change/:id", updateDosageChange);
+router.delete("/dosage-change/:id", deleteDosageChange);
 
 export default router;

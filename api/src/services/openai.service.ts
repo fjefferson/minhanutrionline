@@ -35,6 +35,18 @@ export interface SymptomHistoryEntry {
   symptoms: string[];
 }
 
+export interface CurrentDosageContext {
+  medication: string;
+  doseMg: number | null;
+  startDate: Date;
+}
+
+export interface ProgressContext {
+  currentWeightKg: number;
+  initialWeightKg: number | null;
+  totalLostKg: number | null;
+}
+
 export interface RagInput {
   symptoms: string[];
   extraNotes: string;
@@ -42,6 +54,8 @@ export interface RagInput {
   profile?: PatientProfile | null;
   symptomHistory?: SymptomHistoryEntry[];
   patientName?: string;
+  currentDosage?: CurrentDosageContext | null;
+  progress?: ProgressContext | null;
 }
 
 const GENDER_LABEL: Record<Gender, string> = {
@@ -116,6 +130,30 @@ function buildProfileContext(profile: PatientProfile): string {
   return lines.join("\n");
 }
 
+function buildDosageContext(dosage: CurrentDosageContext): string {
+  const weeks = Math.floor(
+    (Date.now() - new Date(dosage.startDate).getTime()) /
+      (1000 * 60 * 60 * 24 * 7),
+  );
+  const days = Math.floor(
+    (Date.now() - new Date(dosage.startDate).getTime()) / (1000 * 60 * 60 * 24),
+  );
+  const timeLabel =
+    weeks >= 2 ? `${weeks} semana(s)` : days === 1 ? "1 dia" : `${days} dias`;
+  const doseStr = dosage.doseMg != null ? ` ${dosage.doseMg} mg` : "";
+  return `- Medicamento GLP-1 atual (registrado pelo paciente): ${dosage.medication}${doseStr} — em uso há ${timeLabel}`;
+}
+
+function buildProgressContext(p: ProgressContext): string {
+  const lines: string[] = [];
+  lines.push(`- Peso atual (medido pelo paciente): ${p.currentWeightKg} kg`);
+  if (p.totalLostKg !== null && p.totalLostKg > 0)
+    lines.push(
+      `- Total perdido desde o início do acompanhamento: ${p.totalLostKg} kg`,
+    );
+  return lines.join("\n");
+}
+
 export async function generateNutritionalGuidance(
   input: RagInput,
 ): Promise<string> {
@@ -126,6 +164,8 @@ export async function generateNutritionalGuidance(
     profile,
     symptomHistory,
     patientName,
+    currentDosage,
+    progress,
   } = input;
 
   const profileContext = profile ? buildProfileContext(profile) : null;
@@ -155,7 +195,20 @@ REGRA ABSOLUTA — SIGA SEM EXCEÇÃO:
           )}\n\nConsulta atual: ${symptoms.length > 0 ? symptoms.join(", ") : "nenhum sintoma específico marcado"}\n\nIMPORTANTE: Compare a consulta atual com o histórico. Se houver sintomas que sumiram, mencione que houve melhora. Se houver sintomas novos, destaque. Se os sintomas persistirem, reforce a orientação. Seja específico sobre a evolução observada.`
       : "";
 
-  const userPrompt = `${patientName ? `Nome do paciente: ${patientName}\n\n` : ""}${profileContext ? `Perfil do paciente:\n${profileContext}\n\n` : ""}O paciente relatou os seguintes sintomas após uso de GLP-1:
+  const dosageContext = currentDosage
+    ? buildDosageContext(currentDosage)
+    : null;
+  const progressContext = progress ? buildProgressContext(progress) : null;
+
+  const extraProfileLines = [dosageContext, progressContext]
+    .filter(Boolean)
+    .join("\n");
+
+  const fullProfileContext = [profileContext, extraProfileLines || null]
+    .filter(Boolean)
+    .join("\n");
+
+  const userPrompt = `${patientName ? `Nome do paciente: ${patientName}\n\n` : ""}${fullProfileContext ? `Perfil do paciente:\n${fullProfileContext}\n\n` : ""}O paciente relatou os seguintes sintomas após uso de GLP-1:
 Sintomas: ${symptoms.length > 0 ? symptoms.join(", ") : "nenhum sintoma específico marcado"}
 ${extraNotes ? `Observações adicionais: ${extraNotes}` : ""}
 ${historyContext}

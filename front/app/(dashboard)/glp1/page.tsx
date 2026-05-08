@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import api from "@/lib/api";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import ReactMarkdown from "react-markdown";
 import { useAuthStore } from "@/store/auth.store";
 import {
@@ -21,6 +22,13 @@ import {
   TrendingDown,
   TrendingUp,
   Minus,
+  Syringe,
+  CalendarDays,
+  ChevronDown,
+  ChevronUp,
+  X,
+  Trash2,
+  Pencil,
 } from "lucide-react";
 
 interface Symptom {
@@ -39,6 +47,20 @@ interface Report {
 }
 
 type View = "history" | "form" | "result";
+type Tab = "orientacoes" | "dosagem";
+
+interface Glp1DosageLog {
+  id: string;
+  medication: string;
+  doseMg: number | null;
+  startDate: string;
+  endDate: string | null;
+  changeReason: string | null;
+  prescribedBy: string | null;
+  nextChangePlanned: string | null;
+  toleranceNotes: string | null;
+  createdAt: string;
+}
 
 function FreeLimitModal({ onClose }: { onClose: () => void }) {
   return (
@@ -133,13 +155,34 @@ function ProfileGateModal({ onClose }: { onClose: () => void }) {
 export default function Glp1Page() {
   const { user } = useAuthStore();
   const firstName = user?.name?.split(" ")[0] ?? "";
+  const searchParams = useSearchParams();
   const [view, setView] = useState<View>("history");
+  const tab: Tab =
+    searchParams.get("tab") === "dosagem" ? "dosagem" : "orientacoes";
   const [history, setHistory] = useState<Report[]>([]);
   const [loadingHistory, setLoadingHistory] = useState(true);
   const [symptoms, setSymptoms] = useState<Symptom[]>([]);
   const [profileBlocked, setProfileBlocked] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [profileChecked, setProfileChecked] = useState(false);
+
+  // Dosagem state
+  const [dosageLogs, setDosageLogs] = useState<Glp1DosageLog[]>([]);
+  const [loadingDosage, setLoadingDosage] = useState(true);
+  const [showDosageForm, setShowDosageForm] = useState(false);
+  const [dosageForm, setDosageForm] = useState({
+    medication: "",
+    doseMg: "",
+    startDate: new Date().toISOString().split("T")[0],
+    changeReason: "",
+    prescribedBy: "",
+    nextChangePlanned: "",
+    toleranceNotes: "",
+  });
+  const [dosageSubmitting, setDosageSubmitting] = useState(false);
+  const [dosageError, setDosageError] = useState("");
+  const [expandedDosageId, setExpandedDosageId] = useState<string | null>(null);
+  const [deletingDosageId, setDeletingDosageId] = useState<string | null>(null);
 
   const [freeLimitReached, setFreeLimitReached] = useState(false);
   const [showFreeLimitModal, setShowFreeLimitModal] = useState(false);
@@ -171,6 +214,15 @@ export default function Glp1Page() {
       .finally(() => setLoadingHistory(false));
   };
 
+  const loadDosageHistory = () => {
+    setLoadingDosage(true);
+    api
+      .get("/glp1/dosage-history")
+      .then((r) => setDosageLogs(r.data))
+      .catch(() => {})
+      .finally(() => setLoadingDosage(false));
+  };
+
   const loadSymptoms = () => {
     api
       .get("/glp1/symptoms")
@@ -195,6 +247,7 @@ export default function Glp1Page() {
   useEffect(() => {
     const timeout = setTimeout(() => {
       loadHistory();
+      loadDosageHistory();
       loadFreeStatus();
       loadSymptoms();
       api
@@ -210,6 +263,63 @@ export default function Glp1Page() {
     }, 0);
     return () => clearTimeout(timeout);
   }, []);
+
+  const handleDosageSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!dosageForm.medication || !dosageForm.startDate) {
+      setDosageError("Medicamento e data de início são obrigatórios.");
+      return;
+    }
+    setDosageError("");
+    setDosageSubmitting(true);
+    try {
+      await api.post("/glp1/dosage-change", {
+        medication: dosageForm.medication,
+        doseMg: dosageForm.doseMg ? Number(dosageForm.doseMg) : undefined,
+        startDate: dosageForm.startDate,
+        changeReason: dosageForm.changeReason || undefined,
+        prescribedBy: dosageForm.prescribedBy || undefined,
+        nextChangePlanned: dosageForm.nextChangePlanned || undefined,
+        toleranceNotes: dosageForm.toleranceNotes || undefined,
+      });
+      setDosageForm({
+        medication: "",
+        doseMg: "",
+        startDate: new Date().toISOString().split("T")[0],
+        changeReason: "",
+        prescribedBy: "",
+        nextChangePlanned: "",
+        toleranceNotes: "",
+      });
+      setShowDosageForm(false);
+      await loadDosageHistory();
+    } catch {
+      setDosageError("Erro ao salvar. Tente novamente.");
+    } finally {
+      setDosageSubmitting(false);
+    }
+  };
+
+  const handleDeleteDosage = async (id: string) => {
+    setDeletingDosageId(id);
+    try {
+      await api.delete(`/glp1/dosage-change/${id}`);
+      await loadDosageHistory();
+    } catch {
+      // silencioso
+    } finally {
+      setDeletingDosageId(null);
+    }
+  };
+
+  const setDosageField =
+    (field: keyof typeof dosageForm) =>
+    (
+      e: React.ChangeEvent<
+        HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+      >,
+    ) =>
+      setDosageForm((p) => ({ ...p, [field]: e.target.value }));
 
   const toggle = (slug: string) =>
     setSelected((prev) =>
@@ -738,43 +848,27 @@ export default function Glp1Page() {
         </div>
       )}
 
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">
-            Orientações GLP-1
-          </h1>
-          <p className="text-gray-500 mt-1 text-sm">
-            Orientações nutricionais personalizadas para os seus sintomas
-          </p>
+          {tab === "orientacoes" ? (
+            <>
+              <h1 className="text-2xl font-bold text-gray-900">
+                Consultar Sintomas
+              </h1>
+              <p className="text-gray-500 mt-1 text-sm">
+                Orientações nutricionais personalizadas para os seus sintomas
+              </p>
+            </>
+          ) : (
+            <>
+              <h1 className="text-2xl font-bold text-gray-900">Doses GLP-1</h1>
+              <p className="text-gray-500 mt-1 text-sm">
+                Histórico de mudanças de dosagem do seu medicamento
+              </p>
+            </>
+          )}
         </div>
-        <button
-          onClick={() => {
-            if (profileBlocked) {
-              setShowProfileModal(true);
-              return;
-            }
-            if (freeLimitReached) {
-              setShowFreeLimitModal(true);
-              return;
-            }
-            openForm();
-          }}
-          className="flex items-center gap-2 bg-green-600 text-white px-4 py-2.5 rounded-xl text-sm font-semibold hover:bg-green-700 transition shrink-0"
-        >
-          <Plus className="w-4 h-4" />
-          Nova orientação
-        </button>
-      </div>
-
-      {loadingHistory ? (
-        <div className="flex items-center justify-center h-48 text-gray-400 text-sm">
-          Carregando...
-        </div>
-      ) : history.length === 0 ? (
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-12 text-center">
-          <p className="text-gray-400 text-sm mb-4">
-            Você ainda não tem nenhuma orientação.
-          </p>
+        {tab === "orientacoes" ? (
           <button
             onClick={() => {
               if (profileBlocked) {
@@ -787,91 +881,439 @@ export default function Glp1Page() {
               }
               openForm();
             }}
-            className="inline-flex items-center gap-2 bg-green-600 text-white px-5 py-2.5 rounded-xl text-sm font-semibold hover:bg-green-700 transition"
+            className="flex items-center gap-2 bg-green-600 text-white px-4 py-2.5 rounded-xl text-sm font-semibold hover:bg-green-700 transition shrink-0"
           >
             <Plus className="w-4 h-4" />
-            Fazer primeira orientação
+            Nova orientação
           </button>
-        </div>
-      ) : (
-        <div className="space-y-3">
-          {history.map((r) => (
-            <Link
-              key={r.id}
-              href={`/glp1/historico/${r.id}`}
-              className="block bg-white rounded-2xl border border-gray-100 shadow-sm p-5 hover:shadow-md transition group"
+        ) : (
+          <button
+            onClick={() => setShowDosageForm((p) => !p)}
+            className="flex items-center gap-2 bg-green-600 text-white px-4 py-2.5 rounded-xl text-sm font-semibold hover:bg-green-700 transition shrink-0"
+          >
+            <Plus className="w-4 h-4" />
+            Registrar dose
+          </button>
+        )}
+      </div>
+
+      {/* ── ABA DOSAGEM ── */}
+      {tab === "dosagem" && (
+        <div className="space-y-4">
+          {/* Formulário de novo registro */}
+          {showDosageForm && (
+            <form
+              onSubmit={handleDosageSubmit}
+              className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 space-y-4"
             >
-              <div className="flex items-start justify-between gap-4">
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-2">
-                    <p className="text-xs text-gray-400">
-                      {new Date(r.createdAt).toLocaleString("pt-BR")}
-                    </p>
-                    {(() => {
-                      const idx = history.indexOf(r);
-                      const prev = history[idx + 1];
-                      if (!prev) return null;
-                      const curr = r.symptoms.length;
-                      const last = prev.symptoms.length;
-                      if (curr < last)
-                        return (
-                          <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-green-700 bg-green-50 px-2 py-0.5 rounded-full">
-                            <TrendingDown className="w-3 h-3" /> Melhora
-                          </span>
-                        );
-                      if (curr > last)
-                        return (
-                          <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-orange-600 bg-orange-50 px-2 py-0.5 rounded-full">
-                            <TrendingUp className="w-3 h-3" /> Piora
-                          </span>
-                        );
-                      return (
-                        <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">
-                          <Minus className="w-3 h-3" /> Estável
-                        </span>
-                      );
-                    })()}
-                  </div>
-                  <div className="flex flex-wrap gap-1.5 mb-2">
-                    {r.symptoms.map((s) => (
-                      <span
-                        key={s.symptom.slug}
-                        className="bg-green-50 text-green-700 text-xs px-2.5 py-0.5 rounded-full font-medium"
-                      >
-                        {s.symptom.name}
-                      </span>
-                    ))}
-                  </div>
-                  {r.reviewResponse ? (
-                    <div className="flex items-center gap-1.5 bg-purple-50 border border-purple-200 text-purple-700 text-xs font-medium px-3 py-1.5 rounded-lg mb-2">
-                      <MessageSquare className="w-3.5 h-3.5 shrink-0" />
-                      Nutricionista respondeu sua revisão
-                    </div>
-                  ) : r.reviewRequested ? (
-                    <div className="flex items-center gap-1.5 bg-blue-50 border border-blue-200 text-blue-600 text-xs font-medium px-3 py-1.5 rounded-lg mb-2">
-                      <RefreshCw className="w-3.5 h-3.5 shrink-0" />
-                      Revisão em análise
-                    </div>
-                  ) : null}
-                  <p className="text-sm text-gray-500 line-clamp-2">
-                    {r.aiResponse}
-                  </p>
+              <div className="flex items-center justify-between mb-1">
+                <h2 className="text-sm font-semibold text-gray-800">
+                  Registrar mudança de dosagem
+                </h2>
+                <button
+                  type="button"
+                  onClick={() => setShowDosageForm(false)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="sm:col-span-2">
+                  <label className="block text-xs font-medium text-gray-500 mb-1">
+                    Medicamento *
+                  </label>
+                  <select
+                    required
+                    value={dosageForm.medication}
+                    onChange={setDosageField("medication")}
+                    className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 bg-white"
+                  >
+                    <option value="">Selecione o medicamento</option>
+                    <option value="Ozempic">
+                      Ozempic (semaglutida injetável)
+                    </option>
+                    <option value="Wegovy">
+                      Wegovy (semaglutida injetável alta dose)
+                    </option>
+                    <option value="Rybelsus">
+                      Rybelsus (semaglutida oral)
+                    </option>
+                    <option value="Semaglutida manipulada">
+                      Semaglutida manipulada
+                    </option>
+                    <option value="Mounjaro">
+                      Mounjaro (tirzepatida injetável)
+                    </option>
+                    <option value="Tirzepatida manipulada">
+                      Tirzepatida manipulada
+                    </option>
+                    <option value="Saxenda">Saxenda (liraglutida)</option>
+                  </select>
                 </div>
-                <div className="flex flex-col items-end gap-2 shrink-0">
-                  <ChevronRight className="w-4 h-4 text-gray-300 group-hover:text-green-500 transition" />
-                  <div className="flex gap-1.5 mt-1">
-                    {r.helpful === true && (
-                      <ThumbsUp className="w-3.5 h-3.5 text-green-500" />
-                    )}
-                    {r.helpful === false && (
-                      <ThumbsDown className="w-3.5 h-3.5 text-red-400" />
-                    )}
-                  </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 mb-1">
+                    Data de início *
+                  </label>
+                  <input
+                    type="date"
+                    required
+                    value={dosageForm.startDate}
+                    onChange={setDosageField("startDate")}
+                    className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 bg-white"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 mb-1">
+                    Dose (mg)
+                  </label>
+                  <input
+                    type="number"
+                    step="0.25"
+                    min="0"
+                    placeholder="Ex: 0.5, 1.0, 2.0"
+                    value={dosageForm.doseMg}
+                    onChange={setDosageField("doseMg")}
+                    className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 bg-white"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 mb-1">
+                    Próxima troca prevista
+                  </label>
+                  <input
+                    type="date"
+                    value={dosageForm.nextChangePlanned}
+                    onChange={setDosageField("nextChangePlanned")}
+                    className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 bg-white"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 mb-1">
+                    Prescrito por
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Ex: Dra. Ana Silva"
+                    value={dosageForm.prescribedBy}
+                    onChange={setDosageField("prescribedBy")}
+                    className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 bg-white"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 mb-1">
+                    Motivo da mudança
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Ex: Aumento de dose, ajuste de tolerância..."
+                    value={dosageForm.changeReason}
+                    onChange={setDosageField("changeReason")}
+                    className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 bg-white"
+                  />
+                </div>
+                <div className="sm:col-span-2">
+                  <label className="block text-xs font-medium text-gray-500 mb-1">
+                    Notas de tolerância / observações
+                  </label>
+                  <textarea
+                    rows={2}
+                    placeholder="Ex: náuseas leves nas primeiras semanas, melhorou após 2 semanas..."
+                    value={dosageForm.toleranceNotes}
+                    onChange={setDosageField("toleranceNotes")}
+                    className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 bg-white resize-none"
+                  />
                 </div>
               </div>
-            </Link>
-          ))}
+              {dosageError && (
+                <p className="text-red-500 text-xs">{dosageError}</p>
+              )}
+              <div className="flex justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => setShowDosageForm(false)}
+                  className="px-4 py-2 text-sm text-gray-500 hover:text-gray-700 transition"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={dosageSubmitting}
+                  className="bg-green-600 hover:bg-green-700 text-white px-5 py-2 rounded-xl text-sm font-semibold transition disabled:opacity-50"
+                >
+                  {dosageSubmitting ? "Salvando..." : "Salvar"}
+                </button>
+              </div>
+            </form>
+          )}
+
+          {/* Timeline */}
+          {loadingDosage ? (
+            <div className="flex items-center justify-center h-32 text-gray-400 text-sm">
+              Carregando...
+            </div>
+          ) : dosageLogs.length === 0 ? (
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-12 text-center">
+              <div className="w-12 h-12 bg-green-50 rounded-full flex items-center justify-center mx-auto mb-3">
+                <Syringe className="w-6 h-6 text-green-500" />
+              </div>
+              <p className="text-gray-400 text-sm mb-3">
+                Nenhuma dose registrada ainda.
+              </p>
+              <button
+                onClick={() => setShowDosageForm(true)}
+                className="text-green-600 text-sm font-medium hover:underline"
+              >
+                Registrar primeira dose
+              </button>
+            </div>
+          ) : (
+            <div className="relative space-y-0">
+              {dosageLogs.map((log, idx) => {
+                const isActive = log.endDate === null;
+                const isExpanded = expandedDosageId === log.id;
+                return (
+                  <div key={log.id} className="flex gap-4">
+                    {/* Linha do timeline */}
+                    <div className="flex flex-col items-center w-8 shrink-0">
+                      <div
+                        className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${
+                          isActive
+                            ? "bg-green-600 text-white"
+                            : "bg-gray-100 text-gray-400"
+                        }`}
+                      >
+                        <Syringe className="w-4 h-4" />
+                      </div>
+                      {idx < dosageLogs.length - 1 && (
+                        <div className="w-px flex-1 bg-gray-100 my-1" />
+                      )}
+                    </div>
+                    {/* Card */}
+                    <div className="flex-1 bg-white rounded-2xl border border-gray-100 shadow-sm p-5 mb-3">
+                      <div
+                        className="flex items-start justify-between cursor-pointer"
+                        onClick={() =>
+                          setExpandedDosageId(isExpanded ? null : log.id)
+                        }
+                      >
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 flex-wrap mb-1">
+                            {isActive && (
+                              <span className="text-xs font-semibold text-green-700 bg-green-50 px-2 py-0.5 rounded-full">
+                                Dose atual
+                              </span>
+                            )}
+                            <span className="text-sm font-semibold text-gray-900">
+                              {log.medication}
+                              {log.doseMg != null && (
+                                <span className="ml-1.5 text-xs font-normal text-gray-500">
+                                  {log.doseMg} mg
+                                </span>
+                              )}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-1 text-xs text-gray-400">
+                            <CalendarDays className="w-3 h-3" />
+                            {new Date(log.startDate).toLocaleDateString(
+                              "pt-BR",
+                            )}
+                            {log.endDate && (
+                              <>
+                                {" "}
+                                →{" "}
+                                {new Date(log.endDate).toLocaleDateString(
+                                  "pt-BR",
+                                )}
+                              </>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2 ml-2">
+                          {isExpanded ? (
+                            <ChevronUp className="w-4 h-4 text-gray-300" />
+                          ) : (
+                            <ChevronDown className="w-4 h-4 text-gray-300" />
+                          )}
+                        </div>
+                      </div>
+
+                      {isExpanded && (
+                        <div className="mt-4 space-y-2 border-t border-gray-50 pt-4">
+                          {log.changeReason && (
+                            <div>
+                              <span className="text-xs font-medium text-gray-400">
+                                Motivo da mudança
+                              </span>
+                              <p className="text-sm text-gray-700">
+                                {log.changeReason}
+                              </p>
+                            </div>
+                          )}
+                          {log.prescribedBy && (
+                            <div>
+                              <span className="text-xs font-medium text-gray-400">
+                                Prescrito por
+                              </span>
+                              <p className="text-sm text-gray-700">
+                                {log.prescribedBy}
+                              </p>
+                            </div>
+                          )}
+                          {log.nextChangePlanned && (
+                            <div>
+                              <span className="text-xs font-medium text-gray-400">
+                                Próxima troca prevista
+                              </span>
+                              <p className="text-sm text-gray-700">
+                                {new Date(
+                                  log.nextChangePlanned,
+                                ).toLocaleDateString("pt-BR")}
+                              </p>
+                            </div>
+                          )}
+                          {log.toleranceNotes && (
+                            <div>
+                              <span className="text-xs font-medium text-gray-400">
+                                Notas de tolerância
+                              </span>
+                              <p className="text-sm text-gray-700 italic">
+                                "{log.toleranceNotes}"
+                              </p>
+                            </div>
+                          )}
+                          <button
+                            onClick={() => handleDeleteDosage(log.id)}
+                            disabled={deletingDosageId === log.id}
+                            className="flex items-center gap-1.5 text-xs text-red-400 hover:text-red-600 transition mt-2 disabled:opacity-50"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                            {deletingDosageId === log.id
+                              ? "Removendo..."
+                              : "Remover"}
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
+      )}
+
+      {/* ── ABA ORIENTAÇÕES ── */}
+      {tab === "orientacoes" && (
+        <>
+          {loadingHistory ? (
+            <div className="flex items-center justify-center h-48 text-gray-400 text-sm">
+              Carregando...
+            </div>
+          ) : history.length === 0 ? (
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-12 text-center">
+              <p className="text-gray-400 text-sm mb-4">
+                Você ainda não tem nenhuma orientação.
+              </p>
+              <button
+                onClick={() => {
+                  if (profileBlocked) {
+                    setShowProfileModal(true);
+                    return;
+                  }
+                  if (freeLimitReached) {
+                    setShowFreeLimitModal(true);
+                    return;
+                  }
+                  openForm();
+                }}
+                className="inline-flex items-center gap-2 bg-green-600 text-white px-5 py-2.5 rounded-xl text-sm font-semibold hover:bg-green-700 transition"
+              >
+                <Plus className="w-4 h-4" />
+                Fazer primeira orientação
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {history.map((r) => (
+                <Link
+                  key={r.id}
+                  href={`/glp1/historico/${r.id}`}
+                  className="block bg-white rounded-2xl border border-gray-100 shadow-sm p-5 hover:shadow-md transition group"
+                >
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-2">
+                        <p className="text-xs text-gray-400">
+                          {new Date(r.createdAt).toLocaleString("pt-BR")}
+                        </p>
+                        {(() => {
+                          const idx = history.indexOf(r);
+                          const prev = history[idx + 1];
+                          if (!prev) return null;
+                          const curr = r.symptoms.length;
+                          const last = prev.symptoms.length;
+                          if (curr < last)
+                            return (
+                              <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-green-700 bg-green-50 px-2 py-0.5 rounded-full">
+                                <TrendingDown className="w-3 h-3" /> Melhora
+                              </span>
+                            );
+                          if (curr > last)
+                            return (
+                              <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-orange-600 bg-orange-50 px-2 py-0.5 rounded-full">
+                                <TrendingUp className="w-3 h-3" /> Piora
+                              </span>
+                            );
+                          return (
+                            <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">
+                              <Minus className="w-3 h-3" /> Estável
+                            </span>
+                          );
+                        })()}
+                      </div>
+                      <div className="flex flex-wrap gap-1.5 mb-2">
+                        {r.symptoms.map((s) => (
+                          <span
+                            key={s.symptom.slug}
+                            className="bg-green-50 text-green-700 text-xs px-2.5 py-0.5 rounded-full font-medium"
+                          >
+                            {s.symptom.name}
+                          </span>
+                        ))}
+                      </div>
+                      {r.reviewResponse ? (
+                        <div className="flex items-center gap-1.5 bg-purple-50 border border-purple-200 text-purple-700 text-xs font-medium px-3 py-1.5 rounded-lg mb-2">
+                          <MessageSquare className="w-3.5 h-3.5 shrink-0" />
+                          Nutricionista respondeu sua revisão
+                        </div>
+                      ) : r.reviewRequested ? (
+                        <div className="flex items-center gap-1.5 bg-blue-50 border border-blue-200 text-blue-600 text-xs font-medium px-3 py-1.5 rounded-lg mb-2">
+                          <RefreshCw className="w-3.5 h-3.5 shrink-0" />
+                          Revisão em análise
+                        </div>
+                      ) : null}
+                      <p className="text-sm text-gray-500 line-clamp-2">
+                        {r.aiResponse}
+                      </p>
+                    </div>
+                    <div className="flex flex-col items-end gap-2 shrink-0">
+                      <ChevronRight className="w-4 h-4 text-gray-300 group-hover:text-green-500 transition" />
+                      <div className="flex gap-1.5 mt-1">
+                        {r.helpful === true && (
+                          <ThumbsUp className="w-3.5 h-3.5 text-green-500" />
+                        )}
+                        {r.helpful === false && (
+                          <ThumbsDown className="w-3.5 h-3.5 text-red-400" />
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          )}
+        </>
       )}
     </div>
   );

@@ -145,6 +145,46 @@ export async function createReport(req: AuthenticatedRequest, res: Response) {
     symptoms: r.symptoms.map((s) => s.symptom.name),
   }));
 
+  // Busca dose atual e progresso de peso para enriquecer o contexto da IA
+  const [currentDoseLog, latestProgressEntry, firstProgressEntry] =
+    await Promise.all([
+      prisma.glp1DosageLog.findFirst({
+        where: { userId, endDate: null },
+        orderBy: { startDate: "desc" },
+      }),
+      prisma.progressEntry.findFirst({
+        where: { userId, weightKg: { not: null } },
+        orderBy: { recordedAt: "desc" },
+      }),
+      prisma.progressEntry.findFirst({
+        where: { userId, weightKg: { not: null } },
+        orderBy: { recordedAt: "asc" },
+      }),
+    ]);
+
+  const currentDosage = currentDoseLog
+    ? {
+        medication: currentDoseLog.medication,
+        doseMg: currentDoseLog.doseMg ?? null,
+        startDate: currentDoseLog.startDate,
+      }
+    : null;
+
+  const progress =
+    latestProgressEntry?.weightKg != null
+      ? {
+          currentWeightKg: latestProgressEntry.weightKg,
+          initialWeightKg: firstProgressEntry?.weightKg ?? null,
+          totalLostKg:
+            firstProgressEntry?.weightKg != null
+              ? Math.round(
+                  (firstProgressEntry.weightKg - latestProgressEntry.weightKg) *
+                    10,
+                ) / 10
+              : null,
+        }
+      : null;
+
   // Gera resposta da IA
   const aiResponse = await generateNutritionalGuidance({
     symptoms: symptoms.map((s) => s.name),
@@ -153,6 +193,8 @@ export async function createReport(req: AuthenticatedRequest, res: Response) {
     profile,
     symptomHistory,
     patientName: user?.name ?? undefined,
+    currentDosage,
+    progress,
   });
 
   // Salva no banco
