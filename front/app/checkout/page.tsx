@@ -15,6 +15,27 @@ interface PlanInfo {
 
 type Stage = "confirm" | "waiting" | "success";
 
+function normalizeCpfCnpj(value: string) {
+  return value.replace(/\D/g, "");
+}
+
+function formatCpfCnpj(value: string) {
+  const digits = normalizeCpfCnpj(value).slice(0, 14);
+
+  if (digits.length <= 11) {
+    return digits
+      .replace(/(\d{3})(\d)/, "$1.$2")
+      .replace(/(\d{3})(\d)/, "$1.$2")
+      .replace(/(\d{3})(\d{1,2})$/, "$1-$2");
+  }
+
+  return digits
+    .replace(/(\d{2})(\d)/, "$1.$2")
+    .replace(/(\d{3})(\d)/, "$1.$2")
+    .replace(/(\d{3})(\d)/, "$1/$2")
+    .replace(/(\d{4})(\d{1,2})$/, "$1-$2");
+}
+
 export default function CheckoutPage() {
   return (
     <Suspense
@@ -39,6 +60,7 @@ function CheckoutContent() {
   const [plan, setPlan] = useState<PlanInfo | null>(null);
   const [allPlans, setAllPlans] = useState<PlanInfo[]>([]);
   const [stage, setStage] = useState<Stage>("confirm");
+  const [cpfCnpj, setCpfCnpj] = useState("");
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Detecta se é upgrade
@@ -73,6 +95,9 @@ function CheckoutContent() {
     );
     return { daysRemaining, credit, charge, firstPayment };
   })();
+  const normalizedCpfCnpj = normalizeCpfCnpj(cpfCnpj);
+  const isCpfCnpjValid =
+    normalizedCpfCnpj.length === 11 || normalizedCpfCnpj.length === 14;
 
   useEffect(() => {
     if (!isAuthenticated())
@@ -121,13 +146,18 @@ function CheckoutContent() {
   };
 
   const handleCheckout = async () => {
+    if (!isCpfCnpjValid) {
+      setError("Informe um CPF ou CNPJ valido para continuar.");
+      return;
+    }
+
     setLoading(true);
     setError("");
     try {
       const endpoint = isUpgrade
         ? "/subscriptions/upgrade"
         : "/subscriptions/checkout";
-      const payload = isUpgrade ? { planType } : { planType };
+      const payload = { planType, cpfCnpj: normalizedCpfCnpj };
       const res = await api.post(endpoint, payload);
       if (res.data?.init_point) {
         window.open(res.data.init_point, "_blank", "noopener,noreferrer");
@@ -211,13 +241,39 @@ function CheckoutContent() {
               )}
             </div>
 
+            <div className="mb-6">
+              <label
+                htmlFor="cpfCnpj"
+                className="mb-2 block text-sm font-medium text-gray-700"
+              >
+                CPF ou CNPJ do titular
+              </label>
+              <input
+                id="cpfCnpj"
+                type="text"
+                inputMode="numeric"
+                autoComplete="off"
+                value={cpfCnpj}
+                onChange={(event) => {
+                  setCpfCnpj(formatCpfCnpj(event.target.value));
+                  if (error) setError("");
+                }}
+                placeholder="000.000.000-00"
+                maxLength={18}
+                className="w-full rounded-xl border border-gray-200 px-4 py-3 text-gray-900 outline-none transition focus:border-green-500 focus:ring-2 focus:ring-green-100"
+              />
+              <p className="mt-2 text-xs text-gray-500">
+                Esse dado e obrigatorio para gerar sua cobranca no Asaas.
+              </p>
+            </div>
+
             {error && (
               <p className="text-red-500 text-sm mb-4 text-center">{error}</p>
             )}
 
             <button
               onClick={handleCheckout}
-              disabled={loading}
+              disabled={loading || !isCpfCnpjValid}
               className="w-full bg-green-600 text-white py-3.5 rounded-xl font-semibold hover:bg-green-700 transition disabled:opacity-50 text-lg"
             >
               {loading ? "Aguarde..." : "Assinar agora"}
