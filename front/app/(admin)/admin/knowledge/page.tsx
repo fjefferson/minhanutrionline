@@ -190,11 +190,14 @@ export default function KnowledgePage() {
   };
 
   useEffect(() => {
-    load();
-    api
-      .get("/admin/symptoms")
-      .then((r) => setSymptoms(r.data))
-      .catch(() => {});
+    const timeout = setTimeout(() => {
+      void load();
+      api
+        .get("/admin/symptoms")
+        .then((r) => setSymptoms(r.data))
+        .catch(() => {});
+    }, 0);
+    return () => clearTimeout(timeout);
   }, []);
 
   const openNew = () => {

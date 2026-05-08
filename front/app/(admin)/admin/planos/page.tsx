@@ -44,7 +44,10 @@ export default function AdminPlansPage() {
   };
 
   useEffect(() => {
-    fetchPlans();
+    const timeout = setTimeout(() => {
+      fetchPlans();
+    }, 0);
+    return () => clearTimeout(timeout);
   }, []);
 
   const openEdit = (plan: Plan) => {

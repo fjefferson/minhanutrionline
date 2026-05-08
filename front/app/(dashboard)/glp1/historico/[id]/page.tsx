@@ -71,9 +71,10 @@ export default function Glp1ReportPage() {
       });
       setReviewDone(true);
       setReport((prev) => (prev ? { ...prev, reviewRequested: true } : prev));
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const apiError = err as { response?: { data?: { message?: string } } };
       setReviewError(
-        err?.response?.data?.message ?? "Erro ao solicitar revisão.",
+        apiError?.response?.data?.message ?? "Erro ao solicitar revisão.",
       );
     } finally {
       setReviewSending(false);

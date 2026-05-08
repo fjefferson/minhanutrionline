@@ -42,6 +42,25 @@ interface ProfileForm {
   occupation: string;
 }
 
+interface ProfileResponse {
+  birthDate?: string | null;
+  gender?: Gender | null;
+  heightCm?: number | null;
+  weightKg?: number | null;
+  goal?: NutritionalGoal | null;
+  activityLevel?: ActivityLevel | null;
+  glp1Medication?: string | null;
+  glp1StartDate?: string | null;
+  dietType?: DietType | null;
+  allergies?: string | null;
+  intolerances?: string | null;
+  medicalConditions?: string | null;
+  otherMedications?: string | null;
+  mealFrequency?: string | number | null;
+  foodDislikes?: string | null;
+  occupation?: string | null;
+}
+
 const EMPTY: ProfileForm = {
   birthDate: "",
   gender: "",
@@ -61,7 +80,7 @@ const EMPTY: ProfileForm = {
   occupation: "",
 };
 
-function toForm(data: any): ProfileForm {
+function toForm(data: ProfileResponse): ProfileForm {
   return {
     birthDate: data.birthDate ? data.birthDate.substring(0, 10) : "",
     gender: data.gender ?? "",

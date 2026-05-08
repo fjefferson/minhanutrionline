@@ -19,12 +19,10 @@ export default function ContactForm() {
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState<"idle" | "success" | "error">("idle");
   const [errorMsg, setErrorMsg] = useState("");
+  const [loadedAt] = useState(() => Date.now());
 
   // Honeypot — campo oculto que bots preenchem
   const honeyRef = useRef<HTMLInputElement>(null);
-
-  // Timer anti-bot — formulário enviado rápido demais = bot
-  const loadedAt = useRef(Date.now());
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -32,7 +30,7 @@ export default function ContactForm() {
 
     // Proteção contra bots
     if (honeyRef.current?.value) return;
-    if (Date.now() - loadedAt.current < 3000) {
+    if (Date.now() - loadedAt < 3000) {
       setErrorMsg("Envio muito rápido. Tente novamente.");
       return;
     }

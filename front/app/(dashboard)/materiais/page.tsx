@@ -81,9 +81,12 @@ export default function MateriaisPage() {
       router.push("/planos");
       return;
     }
-    api.get("/materials/categories").then((r) => setCategories(r.data));
-    loadAll();
-  }, []);
+    const timeout = setTimeout(() => {
+      api.get("/materials/categories").then((r) => setCategories(r.data));
+      loadAll();
+    }, 0);
+    return () => clearTimeout(timeout);
+  }, [hasActivePlan, router]);
 
   const handleCatFilter = (id: string | null) => {
     setActiveCat(id);

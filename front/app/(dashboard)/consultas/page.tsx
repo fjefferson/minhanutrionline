@@ -107,6 +107,7 @@ export default function ConsultasPage() {
     date: string;
     hour: number;
   } | null>(null);
+  const [consultasLoadedAt] = useState(() => Date.now());
 
   // Cancel confirm dialog
   const [cancelConfirm, setCancelConfirm] = useState<string | null>(null); // consultation id
@@ -132,24 +133,29 @@ export default function ConsultasPage() {
   }, []);
 
   useEffect(() => {
-    load();
-    api
-      .get<PublicConfig>("/consultations/config")
-      .then((r) => setPublicConfig(r.data))
-      .catch(() => {});
-    api
-      .get("/profile/nutritional")
-      .then((r) => {
-        const p = r.data;
-        if (!p || !p.gender || !p.heightCm || !p.weightKg || !p.goal) {
-          setProfileIncomplete(true);
-        }
-      })
-      .catch(() => {});
+    const timeout = setTimeout(() => {
+      void load();
+      api
+        .get<PublicConfig>("/consultations/config")
+        .then((r) => setPublicConfig(r.data))
+        .catch(() => {});
+      api
+        .get("/profile/nutritional")
+        .then((r) => {
+          const p = r.data;
+          if (!p || !p.gender || !p.heightCm || !p.weightKg || !p.goal) {
+            setProfileIncomplete(true);
+          }
+        })
+        .catch(() => {});
+    }, 0);
 
     // Poll consultations every 30s to reflect nutritionist changes (confirm, reschedule, cancel)
     const pollInterval = setInterval(() => load(), 30_000);
-    return () => clearInterval(pollInterval);
+    return () => {
+      clearTimeout(timeout);
+      clearInterval(pollInterval);
+    };
   }, [load]);
 
   // Fetch blocked dates whenever month changes — and poll every 30s for reactivity
@@ -171,17 +177,20 @@ export default function ConsultasPage() {
   // Fetch available slots when date changes
   useEffect(() => {
     if (!selectedDate) return;
-    setSlotsLoading(true);
-    setSlots([]);
-    setBookingHour(null);
-    setBookError(null);
-    api
-      .get<{ slots: number[] }>(
-        `/consultations/available-slots?date=${selectedDate}`,
-      )
-      .then((r) => setSlots(r.data.slots))
-      .catch(() => setSlots([]))
-      .finally(() => setSlotsLoading(false));
+    const timeout = setTimeout(() => {
+      setSlotsLoading(true);
+      setSlots([]);
+      setBookingHour(null);
+      setBookError(null);
+      api
+        .get<{ slots: number[] }>(
+          `/consultations/available-slots?date=${selectedDate}`,
+        )
+        .then((r) => setSlots(r.data.slots))
+        .catch(() => setSlots([]))
+        .finally(() => setSlotsLoading(false));
+    }, 0);
+    return () => clearTimeout(timeout);
   }, [selectedDate]);
 
   // Calendar helpers
@@ -382,7 +391,7 @@ export default function ConsultasPage() {
                   );
                   const hh = String(bz.getUTCHours()).padStart(2, "0");
                   const canCancel =
-                    new Date(c.scheduledAt).getTime() - Date.now() >
+                    new Date(c.scheduledAt).getTime() - consultasLoadedAt >
                     publicConfig.cancelDays * 86_400_000;
                   return (
                     <div

@@ -99,6 +99,7 @@ export default function ContaPage() {
     credit: number;
     firstPayment: number;
   } | null>(null);
+  const [accountPageLoadedAt] = useState(() => Date.now());
 
   const subStatus = user?.subscription?.status;
   const planName = user?.subscription?.plan?.name;
@@ -176,18 +177,24 @@ export default function ContaPage() {
   // Carrega planos quando entra na aba assinatura
   useEffect(() => {
     if (tab !== "assinatura" || plans.length > 0) return;
-    setPlansLoading(true);
-    api
-      .get("/plans/public")
-      .then((r) => setPlans(r.data))
-      .catch(() => {})
-      .finally(() => setPlansLoading(false));
-  }, [tab]);
+    const timeout = setTimeout(() => {
+      setPlansLoading(true);
+      api
+        .get("/plans/public")
+        .then((r) => setPlans(r.data))
+        .catch(() => {})
+        .finally(() => setPlansLoading(false));
+    }, 0);
+    return () => clearTimeout(timeout);
+  }, [plans.length, tab]);
 
   // Sincroniza campos com o usuário quando o store hidrata
   useEffect(() => {
-    if (user?.name) setName(user.name);
-    if (user?.email) setEmail(user.email);
+    const timeout = setTimeout(() => {
+      if (user?.name) setName(user.name);
+      if (user?.email) setEmail(user.email);
+    }, 0);
+    return () => clearTimeout(timeout);
   }, [user?.name, user?.email]);
 
   function calcProration(
@@ -198,7 +205,8 @@ export default function ContaPage() {
     const daysUsed = Math.max(
       0,
       Math.floor(
-        (Date.now() - new Date(currentPeriodStart).getTime()) / msPerDay,
+        (accountPageLoadedAt - new Date(currentPeriodStart).getTime()) /
+          msPerDay,
       ),
     );
     const daysRemaining = Math.max(0, 30 - daysUsed);

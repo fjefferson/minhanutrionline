@@ -46,7 +46,10 @@ export default function PlanosPage() {
   }, []);
 
   useEffect(() => {
-    fetchPlans();
+    const timeout = setTimeout(() => {
+      fetchPlans();
+    }, 0);
+    return () => clearTimeout(timeout);
   }, [fetchPlans]);
 
   const fmtPrice = (cents: number) =>

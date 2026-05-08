@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/store/auth.store";
 import Sidebar from "@/components/layout/Sidebar";
@@ -17,12 +17,15 @@ export default function DashboardLayout({
 }) {
   const { isAuthenticated, setAuth, token, user } = useAuthStore();
   const router = useRouter();
-  const [mounted, setMounted] = useState(false);
+  const mounted = useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false,
+  );
   const [resentEmail, setResentEmail] = useState(false);
   const [resending, setResending] = useState(false);
 
   useEffect(() => {
-    setMounted(true);
     if (!isAuthenticated()) {
       router.push("/login");
       return;
@@ -34,7 +37,7 @@ export default function DashboardLayout({
         if (token) setAuth(r.data, token);
       })
       .catch(() => {});
-  }, []);
+  }, [isAuthenticated, router, setAuth, token]);
 
   if (!mounted) return null;
 

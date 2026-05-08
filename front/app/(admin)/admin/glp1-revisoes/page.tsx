@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import api from "@/lib/api";
 import ReactMarkdown from "react-markdown";
-import { CheckCircle, Clock, RefreshCw, Send } from "lucide-react";
+import { CheckCircle, Clock, Send } from "lucide-react";
 
 interface Review {
   id: string;
@@ -32,17 +32,20 @@ export default function AdminGlp1RevisoesPage() {
     {},
   );
 
-  const load = (f: typeof filter) => {
+  const load = useCallback((f: typeof filter) => {
     setLoading(true);
     api
       .get(`/admin/glp1/reviews?status=${f === "all" ? "" : f}`)
       .then((r) => setReviews(r.data))
       .finally(() => setLoading(false));
-  };
+  }, []);
 
   useEffect(() => {
-    load(filter);
-  }, [filter]);
+    const timeout = setTimeout(() => {
+      load(filter);
+    }, 0);
+    return () => clearTimeout(timeout);
+  }, [filter, load]);
 
   const resolve = async (id: string) => {
     const text = responses[id]?.trim();

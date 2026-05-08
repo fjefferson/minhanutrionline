@@ -147,15 +147,18 @@ function ProfilePanel({
   const [notFound, setNotFound] = useState(false);
 
   useEffect(() => {
-    setLoading(true);
-    setNotFound(false);
-    api
-      .get<NutritionalProfile>(`/admin/users/${userId}/profile`)
-      .then((r) => setProfile(r.data))
-      .catch((e) => {
-        if (e?.response?.status === 404) setNotFound(true);
-      })
-      .finally(() => setLoading(false));
+    const timeout = setTimeout(() => {
+      setLoading(true);
+      setNotFound(false);
+      api
+        .get<NutritionalProfile>(`/admin/users/${userId}/profile`)
+        .then((r) => setProfile(r.data))
+        .catch((e) => {
+          if (e?.response?.status === 404) setNotFound(true);
+        })
+        .finally(() => setLoading(false));
+    }, 0);
+    return () => clearTimeout(timeout);
   }, [userId]);
 
   return (
@@ -341,7 +344,10 @@ export default function PacientesPage() {
   }, []);
 
   useEffect(() => {
-    loadUsers(debouncedQuery);
+    const timeout = setTimeout(() => {
+      void loadUsers(debouncedQuery);
+    }, 0);
+    return () => clearTimeout(timeout);
   }, [debouncedQuery, loadUsers]);
 
   return (

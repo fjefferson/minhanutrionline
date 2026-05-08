@@ -159,12 +159,18 @@ export default function AdminMateriaisPage() {
   };
 
   useEffect(() => {
-    loadCategories();
+    const timeout = setTimeout(() => {
+      loadCategories();
+    }, 0);
+    return () => clearTimeout(timeout);
   }, []);
 
   useEffect(() => {
-    if (selectedCat) loadMaterials(selectedCat.id);
-    else setMaterials([]);
+    const timeout = setTimeout(() => {
+      if (selectedCat) loadMaterials(selectedCat.id);
+      else setMaterials([]);
+    }, 0);
+    return () => clearTimeout(timeout);
   }, [selectedCat]);
 
   // ── Category CRUD ──────────────────────────────────────────────────────────

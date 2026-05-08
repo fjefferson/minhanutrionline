@@ -193,19 +193,22 @@ export default function Glp1Page() {
   };
 
   useEffect(() => {
-    loadHistory();
-    loadFreeStatus();
-    loadSymptoms();
-    api
-      .get("/profile/nutritional")
-      .then((r) => {
-        const p = r.data;
-        const incomplete =
-          !p || !p.gender || !p.heightCm || !p.weightKg || !p.goal;
-        setProfileBlocked(incomplete);
-      })
-      .catch(() => setProfileBlocked(true))
-      .finally(() => setProfileChecked(true));
+    const timeout = setTimeout(() => {
+      loadHistory();
+      loadFreeStatus();
+      loadSymptoms();
+      api
+        .get("/profile/nutritional")
+        .then((r) => {
+          const p = r.data;
+          const incomplete =
+            !p || !p.gender || !p.heightCm || !p.weightKg || !p.goal;
+          setProfileBlocked(incomplete);
+        })
+        .catch(() => setProfileBlocked(true))
+        .finally(() => setProfileChecked(true));
+    }, 0);
+    return () => clearTimeout(timeout);
   }, []);
 
   const toggle = (slug: string) =>
@@ -240,11 +243,14 @@ export default function Glp1Page() {
       setView("result");
       loadHistory();
       loadFreeStatus();
-    } catch (err: any) {
-      if (err?.response?.data?.code === "FREE_LIMIT_REACHED") {
+    } catch (err: unknown) {
+      const apiError = err as {
+        response?: { data?: { code?: string; freeAiUsed?: number } };
+      };
+      if (apiError?.response?.data?.code === "FREE_LIMIT_REACHED") {
         setFreeLimitReached(true);
         setShowFreeLimitModal(true);
-        setFreeAiUsed(err.response.data.freeAiUsed);
+        setFreeAiUsed(apiError.response?.data?.freeAiUsed ?? freeAiUsed);
         setView("history");
       } else {
         setFormError("Erro ao processar. Tente novamente.");
@@ -273,9 +279,10 @@ export default function Glp1Page() {
         reviewReason: reviewReason.trim() || undefined,
       });
       setReviewDone(true);
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const apiError = err as { response?: { data?: { message?: string } } };
       setReviewError(
-        err?.response?.data?.message ?? "Erro ao solicitar revisão.",
+        apiError?.response?.data?.message ?? "Erro ao solicitar revisão.",
       );
     } finally {
       setReviewSending(false);

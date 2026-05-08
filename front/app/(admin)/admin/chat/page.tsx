@@ -146,8 +146,6 @@ export default function AdminChatPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const activeSessionRef = useRef<ChatSession | null>(null);
-  activeSessionRef.current = activeSession;
 
   const loadSessions = async () => {
     try {
@@ -228,8 +226,14 @@ export default function AdminChatPage() {
     }
   };
 
+  const activeSessionId = activeSession?.id;
+  const activeSessionStatus = activeSession?.status;
+
   useEffect(() => {
-    loadSessions();
+    const timeout = setTimeout(() => {
+      void loadSessions();
+    }, 0);
+    return () => clearTimeout(timeout);
   }, []);
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -237,23 +241,25 @@ export default function AdminChatPage() {
 
   // Polling da lista de sessões (novas conversas aparecem automaticamente)
   useEffect(() => {
-    const interval = setInterval(loadSessions, 8000);
+    const interval = setInterval(() => {
+      void loadSessions();
+    }, 8000);
     return () => clearInterval(interval);
   }, []);
 
   // Polling de mensagens da sessão ativa
   useEffect(() => {
-    if (!activeSession || activeSession.status === "CLOSED") return;
+    if (!activeSessionId || activeSessionStatus === "CLOSED") return;
     const interval = setInterval(async () => {
       try {
-        const res = await api.get(`/chat/session/${activeSession.id}/messages`);
+        const res = await api.get(`/chat/session/${activeSessionId}/messages`);
         setMessages(res.data);
       } catch {
         /**/
       }
     }, 3000);
     return () => clearInterval(interval);
-  }, [activeSession?.id, activeSession?.status]);
+  }, [activeSession, activeSessionId, activeSessionStatus]);
 
   const q = search.toLowerCase().trim();
   const filterSessions = (list: ChatSession[]) =>

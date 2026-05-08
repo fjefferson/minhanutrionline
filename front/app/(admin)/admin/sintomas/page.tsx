@@ -36,7 +36,10 @@ export default function AdminSymptomsPage() {
   };
 
   useEffect(() => {
-    load();
+    const timeout = setTimeout(() => {
+      load();
+    }, 0);
+    return () => clearTimeout(timeout);
   }, []);
 
   const openEdit = (s: Symptom) => {

@@ -13,20 +13,23 @@ function ConfirmarEmailContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const { user, token, setAuth } = useAuthStore();
-  const [state, setState] = useState<State>("loading");
-  const [message, setMessage] = useState("");
+  const success = searchParams.get("success");
+  const verificationToken = searchParams.get("token") ?? "";
+  const [state] = useState<State>(() => {
+    if (success === "1") return "success";
+    if (!verificationToken) return "error";
+    return "loading";
+  });
+  const [message] = useState(() =>
+    !verificationToken && success !== "1" ? "Link inválido." : "",
+  );
   const ran = useRef(false);
 
   useEffect(() => {
     if (ran.current) return;
     ran.current = true;
 
-    const success = searchParams.get("success");
-    const tkn = searchParams.get("token");
-
     if (success === "1") {
-      // Veio do redirect do backend após verificar com sucesso
-      setState("success");
       // Atualiza o store se o usuário já estiver logado
       if (token) {
         api
@@ -37,16 +40,12 @@ function ConfirmarEmailContent() {
       return;
     }
 
-    if (!tkn) {
-      setState("error");
-      setMessage("Link inválido.");
-      return;
-    }
+    if (!verificationToken) return;
 
     // Verifica o token via GET direto para o backend (o backend faz redirect)
     // Como o backend redireciona, chamamos via window.location para seguir o redirect
-    window.location.href = `${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001"}/auth/verify-email?token=${tkn}`;
-  }, []);
+    window.location.href = `${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001"}/auth/verify-email?token=${verificationToken}`;
+  }, [searchParams, setAuth, success, token, verificationToken]);
 
   if (state === "loading") {
     return (

@@ -43,7 +43,10 @@ export default function AdminSubscriptionsPage() {
   };
 
   useEffect(() => {
-    fetchSubs();
+    const timeout = setTimeout(() => {
+      fetchSubs();
+    }, 0);
+    return () => clearTimeout(timeout);
   }, []);
 
   const handleActivate = async (id: string) => {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
+import { useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import api from "@/lib/api";
 import Link from "next/link";
@@ -15,11 +15,9 @@ function RedefinirSenhaForm() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
-  const [error, setError] = useState("");
-
-  useEffect(() => {
-    if (!token) setError("Link inválido ou expirado.");
-  }, [token]);
+  const [error, setError] = useState(() =>
+    token ? "" : "Link inválido ou expirado.",
+  );
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();

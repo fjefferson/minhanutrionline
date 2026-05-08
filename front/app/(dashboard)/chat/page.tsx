@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import api from "@/lib/api";
 import { useAuthStore } from "@/store/auth.store";
 import {
@@ -158,6 +158,8 @@ export default function ChatPage() {
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const activeSessionId = activeSession?.id;
+  const activeSessionStatus = activeSession?.status;
 
   const loadAllSessions = async () => {
     try {
@@ -203,16 +205,16 @@ export default function ChatPage() {
     setMobileView("chat");
   };
 
-  const pollMessages = async () => {
-    if (!activeSession) return;
+  const pollMessages = useCallback(async () => {
+    if (!activeSessionId) return;
     try {
       const [msgRes, sessionsRes] = await Promise.all([
-        api.get(`/chat/session/${activeSession.id}/messages`),
+        api.get(`/chat/session/${activeSessionId}/messages`),
         api.get("/chat/sessions"),
       ]);
       const updatedSessions: Session[] = sessionsRes.data;
       setAllSessions(updatedSessions);
-      const updated = updatedSessions.find((s) => s.id === activeSession.id);
+      const updated = updatedSessions.find((s) => s.id === activeSessionId);
       if (updated) {
         setActiveSession((prev) =>
           prev ? { ...prev, status: updated.status } : prev,
@@ -222,22 +224,25 @@ export default function ChatPage() {
     } catch {
       /**/
     }
-  };
+  }, [activeSessionId]);
 
   useEffect(() => {
-    loadAllSessions();
+    const timeout = setTimeout(() => {
+      void loadAllSessions();
+    }, 0);
+    return () => clearTimeout(timeout);
   }, []);
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
   useEffect(() => {
     if (pollRef.current) clearInterval(pollRef.current);
-    if (!activeSession || activeSession.status === "CLOSED") return;
+    if (!activeSessionId || activeSessionStatus === "CLOSED") return;
     pollRef.current = setInterval(pollMessages, 5000);
     return () => {
       if (pollRef.current) clearInterval(pollRef.current);
     };
-  }, [activeSession?.id, activeSession?.status]);
+  }, [activeSession, activeSessionId, activeSessionStatus, pollMessages]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0] ?? null;

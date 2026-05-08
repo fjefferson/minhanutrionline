@@ -9,7 +9,6 @@ import {
   Clock,
   Video,
   X,
-  CheckCircle,
   ChevronDown,
   Search,
   Link as LinkIcon,
@@ -157,7 +156,10 @@ export default function AdminConsultasPage() {
   }, []);
 
   useEffect(() => {
-    loadConfig();
+    const timeout = setTimeout(() => {
+      void loadConfig();
+    }, 0);
+    return () => clearTimeout(timeout);
   }, [loadConfig]);
 
   async function handleSaveConfig() {
@@ -238,7 +240,10 @@ export default function AdminConsultasPage() {
   }, [statusFilter]);
 
   useEffect(() => {
-    load();
+    const timeout = setTimeout(() => {
+      void load();
+    }, 0);
+    return () => clearTimeout(timeout);
   }, [load]);
 
   function openEdit(c: Consultation) {
@@ -353,7 +358,11 @@ export default function AdminConsultasPage() {
   }, []);
 
   useEffect(() => {
-    if (tab === "blocks") loadBlocks();
+    if (tab !== "blocks") return;
+    const timeout = setTimeout(() => {
+      void loadBlocks();
+    }, 0);
+    return () => clearTimeout(timeout);
   }, [tab, loadBlocks]);
 
   async function handleCreateBlock() {
