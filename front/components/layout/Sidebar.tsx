@@ -131,16 +131,16 @@ export default function Sidebar() {
   const { user, logout, planType, hasActivePlan } = useAuthStore();
   const [profileIncomplete, setProfileIncomplete] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [mobileOpenPath, setMobileOpenPath] = useState<string | null>(null);
   const [unreadCount, setUnreadCount] = useState(0);
 
   const isAdmin = user?.role === "ADMIN";
   const sections = isAdmin ? adminSections : userSections;
   const plan = planType();
   const active = hasActivePlan();
-
-  useEffect(() => {
-    setMobileOpen(false);
-  }, [pathname]);
+  const isChatRoute = pathname === "/chat" || pathname.startsWith("/chat/");
+  const visibleUnreadCount = isChatRoute ? 0 : unreadCount;
+  const isMobileOpen = mobileOpen && mobileOpenPath === pathname;
 
   useEffect(() => {
     if (isAdmin) return;
@@ -166,11 +166,6 @@ export default function Sidebar() {
     const interval = setInterval(fetchUnread, 30_000);
     return () => clearInterval(interval);
   }, [isAdmin]);
-
-  useEffect(() => {
-    if (pathname === "/chat" || pathname.startsWith("/chat/"))
-      setUnreadCount(0);
-  }, [pathname]);
 
   const planHierarchy: Record<string, number> = {
     BASIC: 1,
@@ -259,11 +254,13 @@ export default function Sidebar() {
                           !
                         </span>
                       )}
-                    {!locked && item.href === "/chat" && unreadCount > 0 && (
-                      <span className="min-w-[18px] h-[18px] flex items-center justify-center text-[10px] font-bold bg-green-500 text-white rounded-full px-1">
-                        {unreadCount > 9 ? "9+" : unreadCount}
-                      </span>
-                    )}
+                    {!locked &&
+                      item.href === "/chat" &&
+                      visibleUnreadCount > 0 && (
+                        <span className="min-w-[18px] h-[18px] flex items-center justify-center text-[10px] font-bold bg-green-500 text-white rounded-full px-1">
+                          {visibleUnreadCount > 9 ? "9+" : visibleUnreadCount}
+                        </span>
+                      )}
                   </Link>
                 );
               })}
@@ -334,14 +331,17 @@ export default function Sidebar() {
       {/* Mobile toggle */}
       <button
         type="button"
-        onClick={() => setMobileOpen(true)}
+        onClick={() => {
+          setMobileOpenPath(pathname);
+          setMobileOpen(true);
+        }}
         className="md:hidden fixed top-4 left-4 z-30 p-2 bg-white rounded-xl shadow-md border border-gray-100"
       >
         <Menu size={18} className="text-gray-700" />
       </button>
 
       {/* Mobile overlay */}
-      {mobileOpen && (
+      {isMobileOpen && (
         <div
           className="md:hidden fixed inset-0 z-40 bg-black/40"
           onClick={() => setMobileOpen(false)}
@@ -351,7 +351,7 @@ export default function Sidebar() {
       {/* Mobile drawer */}
       <aside
         className={`md:hidden fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-xl transition-transform duration-300
-          ${mobileOpen ? "translate-x-0" : "-translate-x-full"}`}
+          ${isMobileOpen ? "translate-x-0" : "-translate-x-full"}`}
       >
         {sidebarContent}
       </aside>

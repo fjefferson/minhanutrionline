@@ -2,14 +2,16 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { useEffect, useState } from "react";
+import { useSyncExternalStore } from "react";
 import { useAuthStore } from "@/store/auth.store";
 
 export default function HomeHeader() {
   const { isAuthenticated, user } = useAuthStore();
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => setMounted(true), []);
+  const mounted = useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false,
+  );
 
   const loggedIn = mounted && isAuthenticated();
   const isAdmin = mounted && user?.role === "ADMIN";

@@ -61,6 +61,7 @@ function CheckoutContent() {
   const [allPlans, setAllPlans] = useState<PlanInfo[]>([]);
   const [stage, setStage] = useState<Stage>("confirm");
   const [cpfCnpj, setCpfCnpj] = useState("");
+  const [checkoutStartedAt] = useState(() => Date.now());
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Detecta se é upgrade
@@ -77,7 +78,8 @@ function CheckoutContent() {
     const daysUsed = Math.max(
       0,
       Math.floor(
-        (Date.now() - new Date(currentSub.currentPeriodStart).getTime()) /
+        (checkoutStartedAt -
+          new Date(currentSub.currentPeriodStart).getTime()) /
           msPerDay,
       ),
     );
@@ -115,7 +117,7 @@ function CheckoutContent() {
         else setPlan(found);
       })
       .catch(() => router.push("/planos"));
-  }, []);
+  }, [isAuthenticated, planType, router]);
 
   useEffect(() => {
     return () => {

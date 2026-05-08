@@ -4,11 +4,11 @@ import { useAuthStore } from "@/store/auth.store";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 
+const PLAN_HIERARCHY = { BASIC: 1, PLUS: 2, PREMIUM: 3 } as const;
+
 export function useRequireAuth(minPlan?: "BASIC" | "PLUS" | "PREMIUM") {
   const { isAuthenticated, planType, hasActivePlan } = useAuthStore();
   const router = useRouter();
-
-  const planHierarchy = { BASIC: 1, PLUS: 2, PREMIUM: 3 };
 
   useEffect(() => {
     if (!isAuthenticated()) {
@@ -18,9 +18,9 @@ export function useRequireAuth(minPlan?: "BASIC" | "PLUS" | "PREMIUM") {
     if (minPlan && hasActivePlan()) {
       const current = planType();
       const currentLevel = current
-        ? (planHierarchy[current as keyof typeof planHierarchy] ?? 0)
+        ? (PLAN_HIERARCHY[current as keyof typeof PLAN_HIERARCHY] ?? 0)
         : 0;
-      if (currentLevel < planHierarchy[minPlan]) {
+      if (currentLevel < PLAN_HIERARCHY[minPlan]) {
         router.push("/planos");
       }
     }
