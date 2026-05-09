@@ -1,4 +1,4 @@
-package com.minhanutri
+package br.com.minhanutrionline
 
 import android.app.Application
 import com.facebook.react.PackageList

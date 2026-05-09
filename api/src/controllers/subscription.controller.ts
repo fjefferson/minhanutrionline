@@ -7,6 +7,12 @@ import {
   cancelAsaasSubscription,
   updateAsaasSubscriptionValue,
 } from "../services/asaas.service";
+
+const PLAN_HIERARCHY: Record<string, number> = {
+  BASIC: 1,
+  PLUS: 2,
+  PREMIUM: 3,
+};
 import { AuthenticatedRequest } from "../middlewares/auth.middleware";
 import { sendWelcomeEmail } from "../services/sendpulse.service";
 import { ASAAS_WEBHOOK_TOKEN } from "../config/env";
@@ -91,7 +97,10 @@ export async function getMySubscription(req: Request, res: Response) {
   const user = (req as AuthenticatedRequest).user!;
   const sub = await prisma.subscription.findUnique({
     where: { userId: user.userId },
-    include: { plan: true },
+    include: {
+      plan: true,
+      scheduledDowngrade: { select: { id: true, name: true, type: true } },
+    },
   });
 
   // Se pendente, verifica pagamento no Asaas e ativa se confirmado
@@ -172,6 +181,172 @@ export async function getMySubscription(req: Request, res: Response) {
   }
 
   res.json(sub ?? null);
+}
+
+const planHierarchyLocal = PLAN_HIERARCHY;
+
+// POST /subscriptions/downgrade
+export async function downgradeSubscription(req: Request, res: Response) {
+  const { planType } = req.body as { planType: string };
+  const user = (req as AuthenticatedRequest).user!;
+
+  const validTypes = ["BASIC", "PLUS", "PREMIUM"];
+  if (!validTypes.includes(planType)) {
+    res.status(400).json({ message: "Plano inválido" });
+    return;
+  }
+
+  const [sub, newPlan] = await Promise.all([
+    prisma.subscription.findUnique({
+      where: { userId: user.userId },
+      include: { plan: true },
+    }),
+    prisma.plan.findFirst({
+      where: { type: planType as "BASIC" | "PLUS" | "PREMIUM", active: true },
+    }),
+  ]);
+
+  if (!sub || sub.status !== "ACTIVE") {
+    res.status(400).json({ message: "Nenhuma assinatura ativa" });
+    return;
+  }
+
+  if (sub.cancelScheduledAt) {
+    res.status(400).json({
+      message:
+        "Você já tem um cancelamento agendado. Não é possível agendar downgrade.",
+    });
+    return;
+  }
+
+  if (!newPlan) {
+    res.status(404).json({ message: "Plano não encontrado" });
+    return;
+  }
+
+  const currentLevel = planHierarchyLocal[sub.plan.type] ?? 0;
+  const newLevel = planHierarchyLocal[planType] ?? 0;
+
+  if (newLevel >= currentLevel) {
+    res.status(400).json({
+      message: "Para subir de plano use o endpoint de upgrade",
+    });
+    return;
+  }
+
+  if (sub.scheduledDowngradePlanId === newPlan.id) {
+    res
+      .status(400)
+      .json({ message: "Downgrade para este plano já está agendado" });
+    return;
+  }
+
+  try {
+    // Atualiza imediatamente o valor recorrente no Asaas (próxima cobrança)
+    if (sub.mpSubscriptionId) {
+      await updateAsaasSubscriptionValue(
+        sub.mpSubscriptionId,
+        newPlan.priceInCents / 100,
+      );
+    }
+
+    await prisma.subscription.update({
+      where: { id: sub.id },
+      data: { scheduledDowngradePlanId: newPlan.id },
+    });
+
+    res.json({
+      message: "Downgrade agendado com sucesso",
+      effectiveAt: sub.currentPeriodEnd,
+      newPlan: { name: newPlan.name, type: newPlan.type },
+    });
+  } catch (err: any) {
+    console.error("Downgrade error:", err?.response?.data ?? err?.message);
+    res.status(502).json({
+      message: "Erro ao processar downgrade",
+      debug: err?.response?.data?.errors?.[0]?.description ?? err?.message,
+    });
+  }
+}
+
+// DELETE /subscriptions/downgrade
+export async function cancelDowngrade(req: Request, res: Response) {
+  const user = (req as AuthenticatedRequest).user!;
+
+  const sub = await prisma.subscription.findUnique({
+    where: { userId: user.userId },
+    include: { plan: true, scheduledDowngrade: true },
+  });
+
+  if (!sub || !sub.scheduledDowngradePlanId) {
+    res.status(400).json({ message: "Nenhum downgrade agendado" });
+    return;
+  }
+
+  try {
+    // Reverte o valor no Asaas para o plano atual
+    if (sub.mpSubscriptionId) {
+      await updateAsaasSubscriptionValue(
+        sub.mpSubscriptionId,
+        sub.plan.priceInCents / 100,
+      );
+    }
+
+    await prisma.subscription.update({
+      where: { id: sub.id },
+      data: { scheduledDowngradePlanId: null },
+    });
+
+    res.json({
+      message: "Downgrade cancelado. Seu plano atual permanece ativo.",
+    });
+  } catch (err: any) {
+    console.error(
+      "Cancel downgrade error:",
+      err?.response?.data ?? err?.message,
+    );
+    res.status(502).json({
+      message: "Erro ao cancelar downgrade",
+      debug: err?.response?.data?.errors?.[0]?.description ?? err?.message,
+    });
+  }
+}
+
+// POST /subscriptions/test-apply-downgrade  ← apenas para testes locais
+export async function testApplyDowngrade(req: Request, res: Response) {
+  if (process.env.NODE_ENV === "production") {
+    res.status(403).json({ message: "Não disponível em produção" });
+    return;
+  }
+
+  const user = (req as AuthenticatedRequest).user!;
+  const sub = await prisma.subscription.findUnique({
+    where: { userId: user.userId },
+    include: { scheduledDowngrade: true },
+  });
+
+  if (!sub?.scheduledDowngradePlanId) {
+    res
+      .status(400)
+      .json({ message: "Nenhum downgrade agendado para este usuário" });
+    return;
+  }
+
+  await prisma.subscription.update({
+    where: { id: sub.id },
+    data: {
+      planId: sub.scheduledDowngradePlanId,
+      scheduledDowngradePlanId: null,
+      currentPeriodStart: new Date(),
+      currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+      status: "ACTIVE",
+    },
+  });
+
+  res.json({
+    message: "Downgrade aplicado (simulação de webhook)",
+    newPlanId: sub.scheduledDowngradePlanId,
+  });
 }
 
 // POST /subscriptions/upgrade
@@ -393,6 +568,14 @@ export async function asaasWebhook(req: Request, res: Response) {
               : {}),
             ...(status === "ACTIVE" && sub.pendingPlanId
               ? { planId: sub.pendingPlanId, pendingPlanId: null }
+              : {}),
+            ...(status === "ACTIVE" &&
+            !sub.pendingPlanId &&
+            sub.scheduledDowngradePlanId
+              ? {
+                  planId: sub.scheduledDowngradePlanId,
+                  scheduledDowngradePlanId: null,
+                }
               : {}),
           },
         });

@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "android": "react-native run-android",
+    "android:clean": "react-native start --reset-cache",
     "ios": "react-native run-ios",
     "lint": "eslint .",
     "start": "react-native start",

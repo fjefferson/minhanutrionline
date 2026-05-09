@@ -1,4 +1,4 @@
-package com.minhanutri
+package br.com.minhanutrionline
 
 import com.facebook.react.ReactActivity
 import com.facebook.react.ReactActivityDelegate
