@@ -12,6 +12,9 @@ import MainNavigator from './MainNavigator';
 import AnamnesisNavigator from './AnamnesisNavigator';
 import PlansScreen from '../screens/plans/PlansScreen';
 import CheckoutScreen from '../screens/plans/CheckoutScreen';
+import DosageScreen from '../screens/dashboard/DosageScreen';
+import ProgressScreen from '../screens/dashboard/ProgressScreen';
+import ReportsScreen from '../screens/dashboard/ReportsScreen';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -63,6 +66,9 @@ export default function RootNavigator() {
         <Stack.Screen name="Anamnesis" component={AnamnesisNavigator} />
         <Stack.Screen name="Plans" component={PlansScreen} />
         <Stack.Screen name="Checkout" component={CheckoutScreen} />
+        <Stack.Screen name="Dosage" component={DosageScreen} />
+        <Stack.Screen name="Progress" component={ProgressScreen} />
+        <Stack.Screen name="Reports" component={ReportsScreen} />
       </Stack.Navigator>
     );
   }

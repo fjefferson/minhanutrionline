@@ -17,6 +17,9 @@ export type RootStackParamList = {
   Main: NavigatorScreenParams<MainTabParamList> | undefined;
   Plans: undefined;
   Checkout: { planType: string };
+  Dosage: undefined;
+  Progress: undefined;
+  Reports: undefined;
 };
 
 export type AnamnesisStackParamList = {

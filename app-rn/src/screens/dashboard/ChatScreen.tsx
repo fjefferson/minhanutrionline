@@ -209,7 +209,7 @@ export default function ChatScreen() {
       if (!result.uri) return;
       const isImage = result.type?.startsWith('image/') ?? false;
       setPickedFile({
-        uri: result.localCopyUri ?? result.uri,
+        uri: (result as any).localCopyUri ?? result.uri,
         name: result.name ?? `arquivo_${Date.now()}`,
         type: result.type ?? 'application/octet-stream',
         isImage,

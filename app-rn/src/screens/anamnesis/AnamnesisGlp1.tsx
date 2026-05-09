@@ -15,6 +15,19 @@ import { AnamnesisStackParamList } from '../../navigation/types';
 import api from '../../lib/api';
 import { ProgressBar, Label, NavButtons } from './AnamnesisPersonal';
 
+function maskDate(v: string): string {
+  const digits = v.replace(/\D/g, '').slice(0, 8);
+  if (digits.length <= 2) return digits;
+  if (digits.length <= 4) return `${digits.slice(0, 2)}/${digits.slice(2)}`;
+  return `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4)}`;
+}
+
+function toIsoDate(ddmmyyyy: string): string | undefined {
+  const [d, m, y] = ddmmyyyy.split('/');
+  if (!d || !m || !y || y.length < 4) return undefined;
+  return `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
+}
+
 type Props = {
   navigation: NativeStackNavigationProp<
     AnamnesisStackParamList,

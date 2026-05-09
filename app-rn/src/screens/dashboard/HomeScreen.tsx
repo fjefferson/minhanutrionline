@@ -328,7 +328,47 @@ export default function HomeScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* ── Email alert ───────────────────────────── */}
+        {/* ── Meu Progresso ─────────────────────────── */}
+        <Text style={styles.sectionTitle}>Meu progresso</Text>
+        <View style={styles.progressGrid}>
+          <TouchableOpacity
+            style={styles.progressCard}
+            activeOpacity={0.85}
+            onPress={() => rootNav.navigate('Dosage')}
+          >
+            <View style={[styles.progressIcon, { backgroundColor: '#eff6ff' }]}>
+              <Ionicons name="medical" size={20} color="#3b82f6" />
+            </View>
+            <Text style={styles.progressCardTitle}>Doses GLP-1</Text>
+            <Text style={styles.progressCardSub}>Histórico de doses</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.progressCard}
+            activeOpacity={0.85}
+            onPress={() => rootNav.navigate('Progress')}
+          >
+            <View style={[styles.progressIcon, { backgroundColor: '#f0fdf4' }]}>
+              <Ionicons name="trending-down" size={20} color="#16a34a" />
+            </View>
+            <Text style={styles.progressCardTitle}>Minha Evolução</Text>
+            <Text style={styles.progressCardSub}>Peso e medidas</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.progressCard}
+            activeOpacity={0.85}
+            onPress={() => rootNav.navigate('Reports')}
+          >
+            <View style={[styles.progressIcon, { backgroundColor: '#fff7ed' }]}>
+              <Ionicons name="bar-chart" size={20} color="#f97316" />
+            </View>
+            <Text style={styles.progressCardTitle}>Relatórios</Text>
+            <Text style={styles.progressCardSub}>Dados e evolução</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* ── Email alert ─────────────────────────── */}
         {user && !user.emailVerified && (
           <View style={styles.alertCard}>
             <Ionicons name="mail-unread" size={20} color="#92400e" />
@@ -556,6 +596,37 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   featureTitleSm: { fontSize: 14, fontWeight: '800', color: '#fff' },
+
+  /* Progress section */
+  progressGrid: {
+    flexDirection: 'row',
+    paddingHorizontal: 20,
+    gap: 10,
+    marginBottom: 24,
+  },
+  progressCard: {
+    flex: 1,
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#f1f5f9',
+    gap: 6,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+  },
+  progressIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  progressCardTitle: { fontSize: 12, fontWeight: '700', color: '#111827' },
+  progressCardSub: { fontSize: 10, color: '#9ca3af', lineHeight: 14 },
 
   /* Alert */
   alertCard: {
