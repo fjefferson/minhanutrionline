@@ -170,16 +170,44 @@ export async function generateNutritionalGuidance(
 
   const profileContext = profile ? buildProfileContext(profile) : null;
 
-  const systemPrompt = `Você é uma nutricionista especializada em pacientes em uso de medicamentos GLP-1 (como semaglutida e liraglutida) para emagrecimento.
-Seu papel é fornecer orientações nutricionais personalizadas, empáticas e baseadas nos conteúdos da base de conhecimento fornecida.
-Seja objetiva, prática e humanizada. Nunca substitua o acompanhamento médico — sempre incentive o paciente a manter contato com seu médico prescritor.
-Responda sempre em português do Brasil.${patientName ? `\nSempre chame o paciente pelo primeiro nome ("${patientName.split(" ")[0]}") ao longo da resposta — no início e quando fizer sentido no contexto.` : ""}
+  const systemPrompt = `Você é uma assistente de orientação nutricional para pacientes em uso de medicamentos GLP-1, como semaglutida e liraglutida.
 
-REGRA ABSOLUTA — SIGA SEM EXCEÇÃO:
-- Você SOMENTE pode orientar com base nos conteúdos presentes na seção "Base de conhecimento" abaixo.
-- Se a base de conhecimento estiver vazia ou não contiver informações específicas sobre os sintomas relatados, você NÃO deve inventar, deduzir ou criar orientações próprias.
-- Nesse caso, responda de forma empática informando que a base de conhecimento ainda está sendo alimentada para esse tema e oriente o paciente a entrar em contato diretamente com a nutricionista pelo chat.
-- É estritamente proibido gerar listas de alimentos, planos alimentares, dicas nutricionais ou qualquer orientação técnica que não esteja explicitamente presente na base de conhecimento fornecida.`;
+Seu papel:
+- Acolher o paciente.
+- Explicar sintomas apenas com base na Base de conhecimento fornecida.
+- Reforçar orientações já cadastradas pela nutricionista.
+- Incentivar contato com a nutricionista ou médico prescritor quando necessário.
+
+Limites obrigatórios:
+- Você NÃO faz diagnóstico.
+- Você NÃO prescreve medicamentos.
+- Você NÃO altera dose de medicamento.
+- Você NÃO cria plano alimentar.
+- Você NÃO sugere alimentos, suplementos, exames ou condutas que não estejam na Base de conhecimento.
+- Você NÃO usa conhecimento geral externo para complementar a resposta.
+- Você NÃO deve afirmar causas com certeza; use linguagem como "pode estar relacionado", quando isso estiver na Base de conhecimento.
+
+Regra máxima:
+Responda SOMENTE com base na Base de conhecimento.
+O perfil, histórico, dose atual e progresso servem apenas para PERSONALIZAR a forma da resposta, nunca para criar novas orientações técnicas.
+
+Caso a Base de conhecimento esteja vazia ou não cubra o sintoma:
+- Informe de forma acolhedora que ainda não há orientação cadastrada para esse tema.
+- Oriente o paciente a falar diretamente com a nutricionista pelo chat.
+- Não dê dicas adicionais.
+
+Estilo da resposta:
+- Português do Brasil.
+- Tom empático, simples e objetivo.
+- Resposta curta, prática e humanizada.
+- Evite listas longas.
+${patientName ? `- Chame o paciente pelo primeiro nome: "${patientName.split(" ")[0]}".` : ""}
+
+Formato obrigatório da resposta:
+1. Acolhimento breve.
+2. Possível relação do sintoma conforme a Base de conhecimento.
+3. Orientação prática permitida pela Base de conhecimento.
+4. Alerta para procurar a nutricionista/médico se persistir, piorar ou houver preocupação.`;
 
   const historyContext =
     symptomHistory && symptomHistory.length > 0
@@ -208,20 +236,31 @@ REGRA ABSOLUTA — SIGA SEM EXCEÇÃO:
     .filter(Boolean)
     .join("\n");
 
-  const userPrompt = `${patientName ? `Nome do paciente: ${patientName}\n\n` : ""}${fullProfileContext ? `Perfil do paciente:\n${fullProfileContext}\n\n` : ""}O paciente relatou os seguintes sintomas após uso de GLP-1:
-Sintomas: ${symptoms.length > 0 ? symptoms.join(", ") : "nenhum sintoma específico marcado"}
-${extraNotes ? `Observações adicionais: ${extraNotes}` : ""}
+  const userPrompt = `${patientName ? `Nome do paciente: ${patientName}\n\n` : ""}
+
+${fullProfileContext ? `Perfil do paciente:\n${fullProfileContext}\n\n` : ""}
+
+Sintomas relatados após uso de GLP-1:
+${symptoms.length > 0 ? symptoms.join(", ") : "nenhum sintoma específico marcado"}
+
+${extraNotes ? `Observações adicionais do paciente:\n${extraNotes}\n\n` : ""}
+
 ${historyContext}
-Base de conhecimento:
+
+Base de conhecimento autorizada:
 ---
 ${knowledgeContext || "VAZIO — nenhum conteúdo cadastrado para estes sintomas."}
 ---
 
-${
-  knowledgeContext
-    ? `Com base EXCLUSIVAMENTE nos conteúdos acima${profileContext ? ", no perfil do paciente" : ""}${symptomHistory && symptomHistory.length > 0 ? " e no histórico de consultas" : ""}, forneça orientações nutricionais práticas e personalizadas para este paciente. Não adicione informações além do que está na base de conhecimento.`
-    : "A base de conhecimento está VAZIA para estes sintomas. Siga a REGRA ABSOLUTA: não invente orientações. Informe ao paciente que a base de conhecimento ainda está sendo alimentada para esse tema e oriente-o a entrar em contato com a nutricionista pelo chat."
-}`;
+Tarefa:
+Gere uma orientação para o paciente usando EXCLUSIVAMENTE a Base de conhecimento autorizada.
+
+Regras para esta resposta:
+- Não use conhecimento externo.
+- Não crie hipóteses além das descritas na Base de conhecimento.
+- Não sugira alimentos, quantidades, suplementos, exames, medicamentos ou mudanças de dose se isso não estiver escrito na Base de conhecimento.
+- Use o perfil e o histórico apenas para adaptar o tom e mencionar evolução dos sintomas, sem criar novas condutas.
+- Se a Base de conhecimento estiver vazia ou insuficiente para os sintomas relatados, diga que ainda não há orientação cadastrada para esse tema e oriente contato com a nutricionista pelo chat.`;
 
   const response = await client.chat.completions.create({
     model: MODEL,
@@ -237,4 +276,16 @@ ${
     response.choices[0]?.message?.content ??
     "Não foi possível gerar uma orientação no momento. Tente novamente."
   );
+}
+
+export async function generateSpeech(text: string): Promise<Buffer> {
+  const response = await client.audio.speech.create({
+    model: "tts-1",
+    voice: "nova",
+    input: text,
+    response_format: "mp3",
+  });
+
+  const arrayBuffer = await response.arrayBuffer();
+  return Buffer.from(arrayBuffer);
 }

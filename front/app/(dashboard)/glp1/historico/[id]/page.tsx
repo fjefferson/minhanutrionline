@@ -11,7 +11,10 @@ import {
   ThumbsDown,
   RefreshCw,
   CheckCircle,
+  Volume2,
+  Square,
 } from "lucide-react";
+import { useTTS } from "@/hooks/useTTS";
 
 interface Report {
   id: string;
@@ -35,6 +38,10 @@ export default function Glp1ReportPage() {
   const [reviewError, setReviewError] = useState("");
   const [reviewDone, setReviewDone] = useState(false);
   const [reviewReason, setReviewReason] = useState("");
+  const { state: ttsState, toggle: toggleTTS } = useTTS({
+    text: report?.aiResponse ?? "",
+    reportId: id,
+  });
 
   useEffect(() => {
     api
@@ -177,6 +184,32 @@ export default function Glp1ReportPage() {
 
         {/* Avaliação */}
         <div className="border-t border-gray-100 pt-5">
+          {process.env.NEXT_PUBLIC_TTS_ENGINE !== "off" && (
+            <>
+              <button
+                onClick={toggleTTS}
+                disabled={ttsState === "loading"}
+                className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium border border-gray-200 text-gray-600 hover:border-green-400 hover:text-green-600 transition mb-4 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {ttsState === "playing" ? (
+                  <Square className="w-4 h-4" />
+                ) : (
+                  <Volume2 className="w-4 h-4" />
+                )}
+                {ttsState === "loading"
+                  ? "Carregando áudio..."
+                  : ttsState === "playing"
+                    ? "Parar áudio"
+                    : "Ouvir orientação"}
+              </button>
+              {ttsState === "error" && (
+                <p className="text-xs text-red-400 mb-3">
+                  Não foi possível reproduzir o áudio. Verifique se o navegador
+                  suporta Text-to-Speech.
+                </p>
+              )}
+            </>
+          )}
           <p className="text-sm font-medium text-gray-700 mb-3">
             Esta orientação foi útil para você?
           </p>

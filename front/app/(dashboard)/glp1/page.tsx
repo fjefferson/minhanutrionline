@@ -29,7 +29,10 @@ import {
   X,
   Trash2,
   Pencil,
+  Volume2,
+  Square,
 } from "lucide-react";
+import { useTTS } from "@/hooks/useTTS";
 
 interface Symptom {
   slug: string;
@@ -380,6 +383,11 @@ export default function Glp1Page() {
     }
   };
 
+  const { state: ttsState, toggle: toggleTTS } = useTTS({
+    text: result?.aiResponse ?? "",
+    reportId: result?.id ?? "",
+  });
+
   const requestReview = async () => {
     if (!result) return;
     setReviewSending(true);
@@ -709,6 +717,32 @@ export default function Glp1Page() {
                     consulte seu médico ou nutricionista.
                   </p>
                 </div>
+                {process.env.NEXT_PUBLIC_TTS_ENGINE !== "off" && (
+                  <>
+                    <button
+                      onClick={toggleTTS}
+                      disabled={ttsState === "loading"}
+                      className="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium border border-gray-200 text-gray-600 hover:border-green-400 hover:text-green-600 transition mb-4 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {ttsState === "playing" ? (
+                        <Square className="w-4 h-4" />
+                      ) : (
+                        <Volume2 className="w-4 h-4" />
+                      )}
+                      {ttsState === "loading"
+                        ? "Carregando áudio..."
+                        : ttsState === "playing"
+                          ? "Parar áudio"
+                          : "Ouvir orientação"}
+                    </button>
+                    {ttsState === "error" && (
+                      <p className="text-xs text-red-400 mb-3">
+                        Não foi possível reproduzir o áudio. Verifique se o
+                        navegador suporta Text-to-Speech.
+                      </p>
+                    )}
+                  </>
+                )}
                 <p className="text-sm font-medium text-gray-700 mb-2">
                   Esta orientação foi útil para você?
                 </p>

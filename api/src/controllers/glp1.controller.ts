@@ -1,7 +1,11 @@
 import { Response } from "express";
 import { AuthenticatedRequest } from "../middlewares/auth.middleware";
 import { prisma } from "../lib/prisma";
-import { generateNutritionalGuidance } from "../services/openai.service";
+import {
+  generateNutritionalGuidance,
+  generateSpeech,
+} from "../services/openai.service";
+import { TTS_ENGINE } from "../config/env";
 
 const GLP1_SLUG = "glp-1";
 
@@ -137,7 +141,7 @@ export async function createReport(req: AuthenticatedRequest, res: Response) {
       symptoms: { include: { symptom: { select: { name: true } } } },
     },
     orderBy: { createdAt: "desc" },
-    take: 5,
+    take: 2,
   });
 
   const symptomHistory = previousReports.map((r) => ({
@@ -315,4 +319,38 @@ export async function requestReview(req: AuthenticatedRequest, res: Response) {
   });
 
   res.json(updated);
+}
+
+export async function ttsReport(req: AuthenticatedRequest, res: Response) {
+  if (TTS_ENGINE !== "openai") {
+    res.status(503).json({
+      message:
+        "Recurso de áudio via OpenAI não está ativo. Configure TTS_ENGINE=openai no servidor.",
+    });
+    return;
+  }
+
+  const userId = req.user!.userId;
+  const { reportId } = req.body as { reportId: string };
+
+  if (!reportId || typeof reportId !== "string") {
+    res.status(400).json({ message: "reportId é obrigatório" });
+    return;
+  }
+
+  const report = await prisma.symptomReport.findUnique({
+    where: { id: reportId },
+  });
+
+  if (!report || report.userId !== userId) {
+    res.status(404).json({ message: "Consulta não encontrada" });
+    return;
+  }
+
+  const audioBuffer = await generateSpeech(report.aiResponse);
+
+  res.set("Content-Type", "audio/mpeg");
+  res.set("Content-Length", String(audioBuffer.length));
+  res.set("Cache-Control", "no-store");
+  res.send(audioBuffer);
 }

@@ -7,6 +7,7 @@ import {
   rateReport,
   requestReview,
   getFreeStatus,
+  ttsReport,
 } from "../controllers/glp1.controller";
 import {
   getDosageHistory,
@@ -25,6 +26,7 @@ router.post("/report", createReport);
 router.get("/reports", getReports);
 router.patch("/report/:id/helpful", rateReport);
 router.post("/report/:id/review", requestReview);
+router.post("/tts", ttsReport);
 
 router.get("/dosage-history", getDosageHistory);
 router.post("/dosage-change", createDosageChange);

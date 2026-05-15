@@ -18,3 +18,10 @@ export const ASAAS_API_KEY = process.env.ASAAS_API_KEY ?? "";
 export const ASAAS_BASE_URL =
   process.env.ASAAS_BASE_URL ?? "https://sandbox.asaas.com/api/v3";
 export const ASAAS_WEBHOOK_TOKEN = process.env.ASAAS_WEBHOOK_TOKEN ?? "";
+// "browser" = Web Speech API no frontend (gratuito, sem chamada ao backend)
+// "openai"  = OpenAI TTS via endpoint /glp1/tts (cobrado por caractere)
+// "off"     = recurso de áudio desabilitado
+export const TTS_ENGINE = (process.env.TTS_ENGINE ?? "browser") as
+  | "browser"
+  | "openai"
+  | "off";
