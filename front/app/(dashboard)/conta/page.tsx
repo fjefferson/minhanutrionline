@@ -255,8 +255,11 @@ export default function ContaPage() {
       });
     } catch (err: unknown) {
       const msg =
+        (err as { response?: { data?: { debug?: string; message?: string } } })
+          ?.response?.data?.debug ??
         (err as { response?: { data?: { message?: string } } })?.response?.data
-          ?.message ?? "Erro ao processar upgrade";
+          ?.message ??
+        "Erro ao processar upgrade";
       setUpgradeMsg({ type: "err", text: msg });
     } finally {
       setUpgradeLoading(null);

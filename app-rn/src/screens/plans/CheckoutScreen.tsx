@@ -117,7 +117,11 @@ export default function CheckoutScreen() {
     pollRef.current = setInterval(async () => {
       try {
         const res = await api.get<SubscriptionMe | null>('/subscriptions/me');
-        if (res.data?.status === 'ACTIVE') {
+        // Se for upgrade, precisamos conferir também se o plano já mudou no servidor
+        const isUpgradeDone = isUpgrade
+          ? res.data?.plan?.type === routePlanType
+          : true;
+        if (res.data?.status === 'ACTIVE' && isUpgradeDone) {
           clearInterval(pollRef.current!);
           await hydrate();
           setStage('success');
@@ -160,8 +164,12 @@ export default function CheckoutScreen() {
       }
       setStage('waiting');
       startPolling();
-    } catch {
-      setError('Erro ao iniciar pagamento. Tente novamente.');
+    } catch (err: any) {
+      setError(
+        err?.response?.data?.debug ||
+          err?.response?.data?.message ||
+          'Erro ao iniciar pagamento. Tente novamente.',
+      );
     } finally {
       setPaying(false);
     }
@@ -181,23 +189,25 @@ export default function CheckoutScreen() {
   return (
     <View style={styles.root}>
       {/* Header */}
-      <LinearGradient colors={['#16a34a', '#15803d']} style={styles.header}>
+      <View style={styles.header}>
         {stage === 'confirm' && (
           <TouchableOpacity
             style={styles.backBtn}
             onPress={() => navigation.goBack()}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
-            <Ionicons name="arrow-back" size={22} color="#fff" />
+            <Ionicons name="arrow-back" size={22} color="#111827" />
           </TouchableOpacity>
         )}
-        <Text style={styles.headerTitle}>
-          {isUpgrade ? 'Confirmar upgrade' : 'Confirmar assinatura'}
-        </Text>
-        <Text style={styles.headerSub}>
-          Você será redirecionado para a página de pagamento
-        </Text>
-      </LinearGradient>
+        <View style={styles.headerTexts}>
+          <Text style={styles.headerTitle}>
+            {isUpgrade ? 'Confirmar upgrade' : 'Confirmar assinatura'}
+          </Text>
+          <Text style={styles.headerSub}>
+            Você será redirecionado para a página de pagamento
+          </Text>
+        </View>
+      </View>
 
       <View style={styles.body}>
         {/* ── CONFIRM ── */}
@@ -322,16 +332,18 @@ export default function CheckoutScreen() {
         {/* ── WAITING ── */}
         {stage === 'waiting' && (
           <View style={styles.centeredStage}>
-            <ActivityIndicator
-              color="#16a34a"
-              size="large"
-              style={{ marginBottom: 24 }}
-            />
-            <Text style={styles.stageTitle}>Aguardando pagamento</Text>
-            <Text style={styles.stageBody}>
-              Conclua o pagamento no navegador. Esta tela será atualizada
-              automaticamente assim que confirmarmos.
-            </Text>
+            <View style={styles.waitingCard}>
+              <View style={styles.waitingIconWrapper}>
+                <View style={styles.waitingIconBg} />
+                <ActivityIndicator color="#16a34a" size="large" />
+              </View>
+              <Text style={styles.stageTitle}>Aguardando pagamento</Text>
+              <Text style={styles.stageBody}>
+                Conclua o pagamento no ambiente seguro.
+                {'\n'}Esta tela será atualizada automaticamente assim que
+                confirmarmos.
+              </Text>
+            </View>
             <TouchableOpacity
               style={styles.cancelLink}
               onPress={() => {
@@ -339,7 +351,9 @@ export default function CheckoutScreen() {
                 setStage('confirm');
               }}
             >
-              <Text style={styles.cancelLinkText}>Cancelar</Text>
+              <Text style={styles.cancelLinkText}>
+                Cancelar e tentar novamente
+              </Text>
             </TouchableOpacity>
           </View>
         )}
@@ -347,13 +361,15 @@ export default function CheckoutScreen() {
         {/* ── SUCCESS ── */}
         {stage === 'success' && (
           <View style={styles.centeredStage}>
-            <View style={styles.successIcon}>
-              <Ionicons name="checkmark" size={36} color="#16a34a" />
+            <View style={styles.successCard}>
+              <View style={styles.successIcon}>
+                <Ionicons name="checkmark" size={36} color="#16a34a" />
+              </View>
+              <Text style={styles.stageTitle}>Pagamento confirmado!</Text>
+              <Text style={styles.stageBody}>
+                Sua assinatura está ativa. Redirecionando para o aplicativo…
+              </Text>
             </View>
-            <Text style={styles.stageTitle}>Pagamento confirmado!</Text>
-            <Text style={styles.stageBody}>
-              Sua assinatura está ativa. Redirecionando…
-            </Text>
           </View>
         )}
       </View>
@@ -369,14 +385,22 @@ const styles = StyleSheet.create({
     backgroundColor: '#f9fafb',
   },
   root: { flex: 1, backgroundColor: '#f9fafb' },
+
+  /* Header */
   header: {
-    paddingTop: Platform.OS === 'ios' ? 56 : 44,
-    paddingBottom: 24,
-    paddingHorizontal: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingTop: Platform.OS === 'ios' ? 56 : 20,
+    paddingBottom: 12,
+    backgroundColor: '#fff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#f3f4f6',
   },
-  backBtn: { marginBottom: 12 },
-  headerTitle: { color: '#fff', fontSize: 20, fontWeight: '700' },
-  headerSub: { color: '#bbf7d0', fontSize: 13, marginTop: 4 },
+  backBtn: { padding: 8, marginRight: 8 },
+  headerTexts: { flex: 1 },
+  headerTitle: { fontSize: 20, fontWeight: '800', color: '#111827' },
+  headerSub: { color: '#6b7280', fontSize: 13, marginTop: 2 },
 
   body: { flex: 1, padding: 20 },
 
@@ -469,28 +493,66 @@ const styles = StyleSheet.create({
 
   /* Waiting / Success */
   centeredStage: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  waitingCard: {
+    backgroundColor: '#fff',
+    borderRadius: 24,
+    padding: 32,
+    alignItems: 'center',
+    width: '100%',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.04,
+    shadowRadius: 16,
+    elevation: 4,
+    marginBottom: 24,
+  },
+  waitingIconWrapper: {
+    width: 80,
+    height: 80,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 24,
+  },
+  waitingIconBg: {
+    position: 'absolute',
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: '#f0fdf4',
+    opacity: 0.8,
+  },
+  successCard: {
+    backgroundColor: '#fff',
+    borderRadius: 24,
+    padding: 32,
+    alignItems: 'center',
+    width: '100%',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.04,
+    shadowRadius: 16,
+    elevation: 4,
+  },
   stageTitle: {
-    fontSize: 20,
-    fontWeight: '700',
+    fontSize: 22,
+    fontWeight: '800',
     color: '#111827',
-    marginBottom: 10,
+    marginBottom: 12,
     textAlign: 'center',
   },
   stageBody: {
-    fontSize: 14,
+    fontSize: 15,
     color: '#6b7280',
     textAlign: 'center',
-    lineHeight: 20,
-    maxWidth: 280,
-    marginBottom: 24,
+    lineHeight: 22,
   },
   successIcon: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
+    width: 80,
+    height: 80,
+    borderRadius: 40,
     backgroundColor: '#dcfce7',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 20,
+    marginBottom: 24,
   },
 });

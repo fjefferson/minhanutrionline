@@ -95,7 +95,7 @@ export async function checkout(req: Request, res: Response) {
 // GET /subscriptions/me
 export async function getMySubscription(req: Request, res: Response) {
   const user = (req as AuthenticatedRequest).user!;
-  const sub = await prisma.subscription.findUnique({
+  let sub = await prisma.subscription.findUnique({
     where: { userId: user.userId },
     include: {
       plan: true,
@@ -103,7 +103,68 @@ export async function getMySubscription(req: Request, res: Response) {
     },
   });
 
-  // Se pendente, verifica pagamento no Asaas e ativa se confirmado
+  // Se tem um upgrade pendente, verifica pagamento do novo ID no Asaas e ativa se confirmado
+  if (sub?.pendingMpSubscriptionId) {
+    try {
+      const upgradeStatus = await getAsaasSubscriptionPaymentStatus(
+        sub.pendingMpSubscriptionId,
+      );
+      if (upgradeStatus === "ACTIVE") {
+        const now = new Date();
+
+        // Cancela a assinatura antiga no Asaas (já que confirmou a nova)
+        if (sub.mpSubscriptionId) {
+          try {
+            await cancelAsaasSubscription(sub.mpSubscriptionId);
+          } catch (e) {
+            console.error(
+              "Erro ao cancelar sub antiga após upgrade via poll:",
+              e,
+            );
+          }
+        }
+
+        const targetPlanId = sub.pendingPlanId ?? sub.planId;
+        const targetPlan = await prisma.plan.findUnique({
+          where: { id: targetPlanId },
+          select: { priceInCents: true },
+        });
+
+        sub = await prisma.subscription.update({
+          where: { id: sub.id },
+          data: {
+            status: "ACTIVE",
+            currentPeriodStart: now,
+            currentPeriodEnd: new Date(
+              now.getTime() + 30 * 24 * 60 * 60 * 1000,
+            ),
+            mpSubscriptionId: sub.pendingMpSubscriptionId,
+            pendingMpSubscriptionId: null,
+            ...(sub.pendingPlanId
+              ? { planId: sub.pendingPlanId, pendingPlanId: null }
+              : {}),
+          },
+          include: {
+            plan: true,
+            scheduledDowngrade: {
+              select: { id: true, name: true, type: true },
+            },
+          },
+        });
+
+        if (targetPlan && sub.mpSubscriptionId) {
+          updateAsaasSubscriptionValue(
+            sub.mpSubscriptionId,
+            targetPlan.priceInCents / 100,
+          ).catch((err) => console.warn(err?.message));
+        }
+      }
+    } catch (err) {
+      console.warn("Erro ao checar status de upgrade pendente", err);
+    }
+  }
+
+  // Se a própria assinatura principal estiver pendente (checkout inicial), verifica
   if (sub?.status === "PENDING" && sub.mpSubscriptionId) {
     try {
       const asaasStatus = await getAsaasSubscriptionPaymentStatus(
@@ -421,7 +482,7 @@ export async function upgradeSubscription(req: Request, res: Response) {
       const credit = Math.round(daysRemaining * oldDailyRate * 100) / 100;
       const charge = Math.round(daysRemaining * newDailyRate * 100) / 100;
       const firstPayment = Math.max(
-        0.01,
+        5.0, // O Asaas exige valor mínimo de R$ 5,00 para criar a cobrança
         Math.round((charge - credit) * 100) / 100,
       );
 
@@ -431,10 +492,7 @@ export async function upgradeSubscription(req: Request, res: Response) {
   }
 
   try {
-    // 1. Cancela assinatura atual no Asaas
-    if (sub.mpSubscriptionId) {
-      await cancelAsaasSubscription(sub.mpSubscriptionId);
-    }
+    // Não cancela a assinatura atual no Asaas aqui (só cancela quando pagar o upgrade)
 
     // 2. Cria nova assinatura no Asaas com o novo plano (1ª cobrança com desconto proporcional)
     const customerId = await findOrCreateCustomer(
@@ -450,16 +508,23 @@ export async function upgradeSubscription(req: Request, res: Response) {
       firstPaymentAmountBRL,
     });
 
-    // 3. Atualiza DB: nova sub ID, plano pendente, zera cancelamento agendado
-    await prisma.subscription.update({
-      where: { id: sub.id },
-      data: {
-        mpSubscriptionId: asaasSub.id,
-        pendingPlanId: newPlan.id,
-        status: "PENDING",
-        cancelScheduledAt: null,
-      },
-    });
+    // 3. Atualiza DB: salva nova sub ID como pendente, plano pendente, zera cancelamento agendado, mantém status ACTIVE
+    try {
+      await prisma.subscription.update({
+        where: { id: sub.id },
+        data: {
+          pendingMpSubscriptionId: asaasSub.id,
+          pendingPlanId: newPlan.id,
+          cancelScheduledAt: null,
+        },
+      });
+    } catch (dbErr) {
+      // ROLLBACK: Se der erro no nosso banco, cancela a assinatura gerada no Asaas para não cobrar o cliente à toa
+      await cancelAsaasSubscription(asaasSub.id).catch((e) =>
+        console.error("Erro ao fazer rollback no asaas:", e.message),
+      );
+      throw dbErr; // Joga o erro para o catch externo
+    }
 
     res.json({ init_point: asaasSub.paymentUrl, proratedInfo });
   } catch (err: any) {
@@ -547,13 +612,34 @@ export async function asaasWebhook(req: Request, res: Response) {
 
   if (status && asaasSubId) {
     try {
+      // Busca a assinatura onde o ID do Asaas bate com o principal OU com o pendente (upgrade)
       const sub = await prisma.subscription.findFirst({
-        where: { mpSubscriptionId: asaasSubId },
+        where: {
+          OR: [
+            { mpSubscriptionId: asaasSubId },
+            { pendingMpSubscriptionId: asaasSubId },
+          ],
+        },
         include: { user: { select: { name: true, email: true } } },
       });
 
       if (sub) {
         const now = new Date();
+        const isUpgradeConfirm =
+          sub.pendingMpSubscriptionId === asaasSubId && status === "ACTIVE";
+
+        // Se for uma confirmação de upgrade, cancela a assinatura antiga no Asaas
+        if (isUpgradeConfirm && sub.mpSubscriptionId) {
+          try {
+            await cancelAsaasSubscription(sub.mpSubscriptionId);
+          } catch (e) {
+            console.error(
+              "Erro ao cancelar assinatura antiga após upgrade:",
+              e,
+            );
+          }
+        }
+
         await prisma.subscription.update({
           where: { id: sub.id },
           data: {
@@ -568,6 +654,10 @@ export async function asaasWebhook(req: Request, res: Response) {
               : {}),
             ...(status === "ACTIVE" && sub.pendingPlanId
               ? { planId: sub.pendingPlanId, pendingPlanId: null }
+              : {}),
+            // Se foi pago o upgrade, consolida o mpSubscriptionId
+            ...(isUpgradeConfirm
+              ? { mpSubscriptionId: asaasSubId, pendingMpSubscriptionId: null }
               : {}),
             ...(status === "ACTIVE" &&
             !sub.pendingPlanId &&

@@ -128,10 +128,15 @@ function CheckoutContent() {
   const startPolling = () => {
     pollRef.current = setInterval(async () => {
       try {
-        const res = await api.get<{ status: string } | null>(
-          "/subscriptions/me",
-        );
-        if (res.data?.status === "ACTIVE") {
+        const res = await api.get<{
+          status: string;
+          plan?: { type: string };
+        } | null>("/subscriptions/me");
+        const isUpgradeDone = isUpgrade
+          ? res.data?.plan?.type === planType
+          : true;
+
+        if (res.data?.status === "ACTIVE" && isUpgradeDone) {
           clearInterval(pollRef.current!);
           setStage("success");
           // Atualiza o store com os dados mais recentes antes de redirecionar
@@ -168,8 +173,12 @@ function CheckoutContent() {
       } else {
         setError("Link de pagamento não retornado. Tente novamente.");
       }
-    } catch {
-      setError("Erro ao iniciar pagamento. Tente novamente.");
+    } catch (err: any) {
+      setError(
+        err?.response?.data?.debug ||
+          err?.response?.data?.message ||
+          "Erro ao iniciar pagamento. Tente novamente.",
+      );
     } finally {
       setLoading(false);
     }

@@ -160,6 +160,7 @@ model Subscription {
   scheduledDowngradePlanId String?
   status                   SubscriptionStatus @default(ACTIVE)
   mpSubscriptionId         String?
+  pendingMpSubscriptionId  String?
   mpPayerId                String?
   currentPeriodStart       DateTime?
   currentPeriodEnd         DateTime?
