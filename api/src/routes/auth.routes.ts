@@ -2,6 +2,7 @@ import { Router } from "express";
 import {
   register,
   login,
+  googleAuth,
   me,
   updateMe,
   changePassword,
@@ -25,6 +26,7 @@ const router = Router();
 
 router.post("/register", registerValidator, validate, register);
 router.post("/login", loginValidator, validate, login);
+router.post("/google", googleAuth);
 router.get("/verify-email", verifyEmail);
 router.post("/resend-verification", resendVerification);
 router.get("/me", authenticate, me);

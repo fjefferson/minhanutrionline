@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import Script from "next/script";
 import { Toaster } from "sonner";
 import CookieConsent from "@/components/CookieConsent";
+import GoogleProvider from "@/components/GoogleProvider";
 import "./globals.css";
 
 const inter = Inter({ subsets: ["latin"] });
@@ -123,9 +124,11 @@ export default function RootLayout({
         suppressHydrationWarning
         className={`${inter.className} min-h-full bg-gray-50 antialiased`}
       >
-        {children}
-        <CookieConsent />
-        <Toaster position="top-right" richColors closeButton />
+        <GoogleProvider>
+          {children}
+          <CookieConsent />
+          <Toaster position="top-right" richColors closeButton />
+        </GoogleProvider>
       </body>
     </html>
   );

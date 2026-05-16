@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
 import jwt, { type SignOptions } from "jsonwebtoken";
+import { OAuth2Client } from "google-auth-library";
 import { prisma } from "../lib/prisma";
 import { JWT_SECRET, JWT_EXPIRES_IN } from "../config/env";
 import {
@@ -12,6 +13,7 @@ import { cancelAsaasSubscription } from "../services/asaas.service";
 import cloudinary from "../config/cloudinary";
 
 const FRONTEND_URL = process.env.FRONTEND_URL ?? "http://localhost:3000";
+const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 export const register = async (req: Request, res: Response): Promise<void> => {
   const { name, email, password } = req.body;
@@ -78,6 +80,17 @@ export const login = async (req: Request, res: Response): Promise<void> => {
   });
   if (!user) {
     res.status(401).json({ message: "Credenciais inválidas" });
+    return;
+  }
+
+  if (!user.password) {
+    // Conta criada via Google — login por senha não permitido
+    res
+      .status(401)
+      .json({
+        message:
+          "Esta conta usa login com Google. Use o botão 'Entrar com Google'.",
+      });
     return;
   }
 
@@ -170,6 +183,13 @@ export const changePassword = async (
   });
   if (!user) {
     res.status(404).json({ message: "Usuário não encontrado" });
+    return;
+  }
+
+  if (!user.password) {
+    res
+      .status(400)
+      .json({ message: "Conta Google não possui senha para alterar" });
     return;
   }
 
@@ -445,7 +465,9 @@ export const deleteAccount = async (
     return;
   }
 
-  const valid = await bcrypt.compare(password, user.password);
+  const valid = user.password
+    ? await bcrypt.compare(password, user.password)
+    : false;
   if (!valid) {
     res.status(401).json({ message: "Senha incorreta" });
     return;
@@ -485,5 +507,95 @@ export const deleteAccount = async (
 
   res.json({
     message: "Conta excluída com sucesso. Todos os seus dados foram removidos.",
+  });
+};
+
+export const googleAuth = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  const { idToken } = req.body as { idToken?: string };
+
+  if (!idToken) {
+    res.status(400).json({ message: "idToken obrigatório" });
+    return;
+  }
+
+  let payload:
+    | { sub: string; email: string; name: string; picture?: string }
+    | undefined;
+  try {
+    const ticket = await googleClient.verifyIdToken({
+      idToken,
+      audience: process.env.GOOGLE_CLIENT_ID,
+    });
+    const p = ticket.getPayload();
+    if (!p?.sub || !p.email) throw new Error("payload inválido");
+    payload = {
+      sub: p.sub,
+      email: p.email,
+      name: p.name ?? p.email,
+      picture: p.picture,
+    };
+  } catch {
+    res.status(401).json({ message: "Token Google inválido" });
+    return;
+  }
+
+  let user = await prisma.user.findFirst({
+    where: { OR: [{ googleId: payload.sub }, { email: payload.email }] },
+    include: { subscription: { include: { plan: true } } },
+  });
+
+  if (!user) {
+    // Novo usuário via Google
+    user = await prisma.user.create({
+      data: {
+        name: payload.name,
+        email: payload.email,
+        googleId: payload.sub,
+        avatarUrl: payload.picture ?? null,
+        emailVerified: true,
+      },
+      include: { subscription: { include: { plan: true } } },
+    });
+  } else if (!user.googleId) {
+    // Vincula conta existente ao Google
+    user = await prisma.user.update({
+      where: { id: user.id },
+      data: { googleId: payload.sub, emailVerified: true },
+      include: { subscription: { include: { plan: true } } },
+    });
+  }
+
+  const signOptions: SignOptions = {
+    expiresIn: JWT_EXPIRES_IN as SignOptions["expiresIn"],
+  };
+  const token = jwt.sign(
+    { userId: user.id, email: user.email, role: user.role },
+    JWT_SECRET,
+    signOptions,
+  );
+
+  res.json({
+    user: {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      avatarUrl: user.avatarUrl ?? null,
+      emailVerified: user.emailVerified,
+      onboardingDone: user.onboardingDone,
+      subscription: user.subscription
+        ? {
+            status: user.subscription.status,
+            plan: {
+              type: user.subscription.plan.type,
+              name: user.subscription.plan.name,
+            },
+          }
+        : null,
+    },
+    token,
   });
 };

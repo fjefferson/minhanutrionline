@@ -10,6 +10,7 @@ import api from "@/lib/api";
 import Link from "next/link";
 import Image from "next/image";
 import { Eye, EyeOff, ChevronRight, ChevronLeft, Check } from "lucide-react";
+import { GoogleLogin } from "@react-oauth/google";
 
 // ── Step 1 schema ────────────────────────────────────────────────────────────
 const accountSchema = z
@@ -94,6 +95,26 @@ export default function RegisterPage() {
   const [showConfirm, setShowConfirm] = useState(false);
   const [saving, setSaving] = useState(false);
   const [step2Error, setStep2Error] = useState("");
+  const [googleLoading, setGoogleLoading] = useState(false);
+  const [googleError, setGoogleError] = useState("");
+
+  const handleGoogleSuccess = async (credential: string) => {
+    setGoogleLoading(true);
+    setGoogleError("");
+    try {
+      const res = await api.post("/auth/google", { idToken: credential });
+      setAuth(res.data.user, res.data.token);
+      // Google users skip account step — go to profile
+      setStep(2);
+    } catch (err: unknown) {
+      const msg =
+        (err as { response?: { data?: { message?: string } } })?.response?.data
+          ?.message ?? "Erro ao entrar com Google.";
+      setGoogleError(msg);
+    } finally {
+      setGoogleLoading(false);
+    }
+  };
 
   const today = new Date().toISOString().split("T")[0];
 
@@ -389,6 +410,59 @@ export default function RegisterPage() {
                 Entrar
               </Link>
             </p>
+
+            {/* Divisor */}
+            <div className="flex items-center gap-3 my-5">
+              <hr className="flex-1 border-gray-200" />
+              <span className="text-xs text-gray-400 font-medium">ou</span>
+              <hr className="flex-1 border-gray-200" />
+            </div>
+
+            {/* Google register */}
+            {googleError && (
+              <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 mb-3">
+                <p className="text-red-600 text-sm">{googleError}</p>
+              </div>
+            )}
+            <div className="flex justify-center">
+              {googleLoading ? (
+                <div className="w-full border border-gray-200 rounded-xl py-3 flex items-center justify-center gap-2 text-sm text-gray-500">
+                  <svg
+                    className="animate-spin w-4 h-4"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                  >
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                    />
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8v8H4z"
+                    />
+                  </svg>
+                  Aguardando Google...
+                </div>
+              ) : (
+                <GoogleLogin
+                  onSuccess={(res) =>
+                    res.credential && handleGoogleSuccess(res.credential)
+                  }
+                  onError={() =>
+                    setGoogleError("Login com Google cancelado ou falhou.")
+                  }
+                  width="100%"
+                  text="signup_with"
+                  shape="rectangular"
+                  logo_alignment="center"
+                />
+              )}
+            </div>
           </div>
         )}
 
