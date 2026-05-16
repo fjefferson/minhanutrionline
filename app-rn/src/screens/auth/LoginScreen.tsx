@@ -17,6 +17,7 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../navigation/types';
 import { useAuthStore } from '../../store/auth.store';
+import { GoogleSignin } from '@react-native-google-signin/google-signin';
 
 type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'Login'>;
@@ -26,7 +27,20 @@ export default function LoginScreen({ navigation }: Props) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPass, setShowPass] = useState(false);
-  const { login, loading } = useAuthStore();
+  const { login, loginWithGoogle, loading } = useAuthStore();
+
+  const handleGoogleLogin = async () => {
+    try {
+      await loginWithGoogle();
+    } catch (err: any) {
+      const msg =
+        err?.response?.data?.message ??
+        err?.googleDebug ??
+        err?.message ??
+        'Erro desconhecido';
+      Alert.alert('Erro Google', msg);
+    }
+  };
 
   const handleLogin = async () => {
     if (!email.trim() || !password) {
@@ -116,6 +130,15 @@ export default function LoginScreen({ navigation }: Props) {
               </TouchableOpacity>
             </View>
 
+            {/* Esqueci a senha */}
+            <TouchableOpacity
+              onPress={() => navigation.navigate('ForgotPassword')}
+              style={styles.forgotBtn}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.forgotText}>Esqueceu a senha?</Text>
+            </TouchableOpacity>
+
             {/* Entrar */}
             <TouchableOpacity
               style={styles.btn}
@@ -139,6 +162,19 @@ export default function LoginScreen({ navigation }: Props) {
               <Text style={styles.divText}>ou</Text>
               <View style={styles.divLine} />
             </View>
+
+            {/* Google */}
+            <TouchableOpacity
+              style={[styles.googleBtn, loading && { opacity: 0.6 }]}
+              onPress={handleGoogleLogin}
+              disabled={loading}
+              activeOpacity={0.85}
+            >
+              <View style={styles.googleLogo}>
+                <Text style={styles.googleLogoText}>G</Text>
+              </View>
+              <Text style={styles.googleBtnText}>Entrar com o Google</Text>
+            </TouchableOpacity>
 
             {/* Cadastro */}
             <TouchableOpacity
@@ -222,6 +258,9 @@ const styles = StyleSheet.create({
   },
   btnText: { color: '#fff', fontSize: 16, fontWeight: '700' },
 
+  forgotBtn: { alignSelf: 'flex-end', marginTop: -8, marginBottom: 16 },
+  forgotText: { fontSize: 13, color: '#16a34a', fontWeight: '600' },
+
   divider: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -230,6 +269,39 @@ const styles = StyleSheet.create({
   },
   divLine: { flex: 1, height: 1, backgroundColor: '#e5e7eb' },
   divText: { color: '#9ca3af', fontSize: 13 },
+
+  googleBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    height: 52,
+    borderRadius: 14,
+    borderWidth: 1.5,
+    borderColor: '#e5e7eb',
+    backgroundColor: '#fff',
+    gap: 10,
+    marginBottom: 12,
+  },
+  googleLogo: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: '#fff',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+  },
+  googleLogoText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#4285F4',
+  },
+  googleBtnText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#374151',
+  },
 
   outlineBtn: {
     borderWidth: 1.5,

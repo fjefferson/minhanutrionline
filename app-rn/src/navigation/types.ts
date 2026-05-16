@@ -13,6 +13,7 @@ export type RootStackParamList = {
   Onboarding: undefined;
   Login: undefined;
   Register: undefined;
+  ForgotPassword: undefined;
   Anamnesis: { returnTo?: keyof MainTabParamList } | undefined;
   Main: NavigatorScreenParams<MainTabParamList> | undefined;
   Plans: undefined;

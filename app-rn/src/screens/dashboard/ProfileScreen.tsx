@@ -349,10 +349,14 @@ export default function ProfileScreen() {
     setPwSaving(true);
     try {
       await api.put('/auth/password', {
-        currentPassword: currentPw,
+        ...(user?.hasPassword ? { currentPassword: currentPw } : {}),
         newPassword: newPw,
       });
-      setPwMsg({ ok: true, text: 'Senha alterada com sucesso!' });
+      const successText = user?.hasPassword
+        ? 'Senha alterada com sucesso!'
+        : 'Senha definida com sucesso!';
+      setPwMsg({ ok: true, text: successText });
+      await updateUser({ hasPassword: true });
       setCurrentPw('');
       setNewPw('');
       setConfirmPw('');
@@ -367,10 +371,12 @@ export default function ProfileScreen() {
   };
 
   const handleDeleteAccount = async () => {
-    if (!deletePw) return;
+    if (user?.hasPassword && !deletePw) return;
     setDeleteLoading(true);
     try {
-      await api.delete('/auth/me', { data: { password: deletePw } });
+      await api.delete('/auth/me', {
+        data: user?.hasPassword ? { password: deletePw } : undefined,
+      });
       await logout();
     } catch (err: any) {
       Alert.alert(
@@ -714,17 +720,27 @@ export default function ProfileScreen() {
       <View style={styles.accountCard}>
         <View style={styles.accountCardHeader}>
           <Ionicons name="lock-closed-outline" size={16} color="#16a34a" />
-          <Text style={styles.accountCardTitle}>Alterar senha</Text>
+          <Text style={styles.accountCardTitle}>
+            {user?.hasPassword ? 'Alterar senha' : 'Definir uma senha'}
+          </Text>
         </View>
-        <TextInput
-          style={[styles.input, { marginTop: 8 }]}
-          value={currentPw}
-          onChangeText={setCurrentPw}
-          placeholder="Senha atual"
-          placeholderTextColor="#9ca3af"
-          secureTextEntry
-          autoComplete="current-password"
-        />
+        {!user?.hasPassword && (
+          <Text style={styles.googlePwNote}>
+            Você entrou com o Google. Defina uma senha para também poder acessar
+            com e-mail.
+          </Text>
+        )}
+        {user?.hasPassword && (
+          <TextInput
+            style={[styles.input, { marginTop: 8 }]}
+            value={currentPw}
+            onChangeText={setCurrentPw}
+            placeholder="Senha atual"
+            placeholderTextColor="#9ca3af"
+            secureTextEntry
+            autoComplete="current-password"
+          />
+        )}
         <TextInput
           style={[styles.input, { marginTop: 10 }]}
           value={newPw}
@@ -772,7 +788,9 @@ export default function ProfileScreen() {
           {pwSaving ? (
             <ActivityIndicator color="#fff" size="small" />
           ) : (
-            <Text style={styles.acctBtnText}>Alterar senha</Text>
+            <Text style={styles.acctBtnText}>
+              {user?.hasPassword ? 'Alterar senha' : 'Definir senha'}
+            </Text>
           )}
         </TouchableOpacity>
       </View>
@@ -815,15 +833,17 @@ export default function ProfileScreen() {
                 permanente.
               </Text>
             </View>
-            <TextInput
-              style={[styles.input, { marginTop: 10 }]}
-              value={deletePw}
-              onChangeText={setDeletePw}
-              placeholder="Confirme sua senha"
-              placeholderTextColor="#9ca3af"
-              secureTextEntry
-              autoComplete="current-password"
-            />
+            {user?.hasPassword && (
+              <TextInput
+                style={[styles.input, { marginTop: 10 }]}
+                value={deletePw}
+                onChangeText={setDeletePw}
+                placeholder="Confirme sua senha"
+                placeholderTextColor="#9ca3af"
+                secureTextEntry
+                autoComplete="current-password"
+              />
+            )}
             <View style={styles.deleteActions}>
               <TouchableOpacity
                 style={[
@@ -831,7 +851,7 @@ export default function ProfileScreen() {
                   deleteLoading && styles.saveBtnDisabled,
                 ]}
                 onPress={handleDeleteAccount}
-                disabled={deleteLoading || !deletePw}
+                disabled={deleteLoading || (!!user?.hasPassword && !deletePw)}
               >
                 {deleteLoading ? (
                   <ActivityIndicator color="#fff" size="small" />
@@ -1078,6 +1098,12 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#111827',
   },
+  googlePwNote: {
+    fontSize: 12,
+    color: '#6b7280',
+    marginTop: 8,
+    lineHeight: 18,
+  },
   acctBtn: {
     backgroundColor: '#16a34a',
     borderRadius: 12,
@@ -1144,24 +1170,22 @@ const styles = StyleSheet.create({
     flex: 1,
     lineHeight: 18,
   },
-  deleteActions: { flexDirection: 'row', gap: 10, marginTop: 12 },
+  deleteActions: { flexDirection: 'column', gap: 10, marginTop: 12 },
   deleteConfirmBtn: {
-    flex: 1,
     backgroundColor: '#dc2626',
     borderRadius: 12,
-    paddingVertical: 13,
+    paddingVertical: 14,
     alignItems: 'center',
   },
-  deleteConfirmBtnText: { color: '#fff', fontWeight: '700', fontSize: 13 },
+  deleteConfirmBtnText: { color: '#fff', fontWeight: '700', fontSize: 14 },
   deleteCancelBtn: {
-    flex: 1,
     borderWidth: 1,
     borderColor: '#e5e7eb',
     borderRadius: 12,
-    paddingVertical: 13,
+    paddingVertical: 14,
     alignItems: 'center',
   },
-  deleteCancelBtnText: { color: '#6b7280', fontWeight: '600', fontSize: 13 },
+  deleteCancelBtnText: { color: '#6b7280', fontWeight: '600', fontSize: 14 },
 
   // ── Navegação e Menu ─────────────────────────────────────
   menuBtn: {

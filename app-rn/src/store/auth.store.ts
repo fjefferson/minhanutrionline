@@ -1,6 +1,15 @@
 import { create } from 'zustand';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import {
+  GoogleSignin,
+  statusCodes,
+} from '@react-native-google-signin/google-signin';
 import api from '../lib/api';
+
+GoogleSignin.configure({
+  webClientId:
+    '69916113404-99l5jk5ll4b36a0no267r6senjene2qq.apps.googleusercontent.com',
+});
 
 interface Subscription {
   status: string;
@@ -15,6 +24,7 @@ interface User {
   emailVerified: boolean;
   avatarUrl?: string | null;
   onboardingDone?: boolean;
+  hasPassword?: boolean;
   subscription?: Subscription | null;
 }
 
@@ -24,6 +34,7 @@ interface AuthState {
   loading: boolean;
   hydrated: boolean;
   login: (email: string, password: string) => Promise<void>;
+  loginWithGoogle: () => Promise<void>;
   register: (name: string, email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   hydrate: () => Promise<void>;
@@ -91,6 +102,31 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       set({ token: data.token, user: data.user, loading: false });
     } catch (err) {
       set({ loading: false });
+      throw err;
+    }
+  },
+
+  loginWithGoogle: async () => {
+    set({ loading: true });
+    try {
+      await GoogleSignin.hasPlayServices();
+      const signInResult = await GoogleSignin.signIn();
+      const idToken = signInResult.data?.idToken;
+      if (!idToken) {
+        const err = new Error('idToken não recebido — verifique webClientId');
+        (err as any).googleDebug = JSON.stringify(signInResult);
+        throw err;
+      }
+      const { data } = await api.post('/auth/google', { idToken });
+      await AsyncStorage.setItem('@minhanutrionline:token', data.token);
+      await AsyncStorage.setItem(
+        '@minhanutrionline:user',
+        JSON.stringify(data.user),
+      );
+      set({ token: data.token, user: data.user, loading: false });
+    } catch (err: any) {
+      set({ loading: false });
+      if (err?.code === statusCodes.SIGN_IN_CANCELLED) return;
       throw err;
     }
   },

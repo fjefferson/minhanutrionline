@@ -85,12 +85,10 @@ export const login = async (req: Request, res: Response): Promise<void> => {
 
   if (!user.password) {
     // Conta criada via Google — login por senha não permitido
-    res
-      .status(401)
-      .json({
-        message:
-          "Esta conta usa login com Google. Use o botão 'Entrar com Google'.",
-      });
+    res.status(401).json({
+      message:
+        "Esta conta usa login com Google. Use o botão 'Entrar com Google'.",
+    });
     return;
   }
 
@@ -167,8 +165,8 @@ export const changePassword = async (
 ): Promise<void> => {
   const { currentPassword, newPassword } = req.body;
 
-  if (!currentPassword || !newPassword) {
-    res.status(400).json({ message: "Campos obrigatórios" });
+  if (!newPassword) {
+    res.status(400).json({ message: "Nova senha obrigatória" });
     return;
   }
   if (newPassword.length < 6) {
@@ -187,9 +185,18 @@ export const changePassword = async (
   }
 
   if (!user.password) {
-    res
-      .status(400)
-      .json({ message: "Conta Google não possui senha para alterar" });
+    // Usuário Google definindo senha pela primeira vez — não há senha atual
+    const hashed = await bcrypt.hash(newPassword, 12);
+    await prisma.user.update({
+      where: { id: req.user!.userId },
+      data: { password: hashed },
+    });
+    res.json({ message: "Senha definida com sucesso" });
+    return;
+  }
+
+  if (!currentPassword) {
+    res.status(400).json({ message: "Senha atual obrigatória" });
     return;
   }
 
@@ -222,6 +229,7 @@ export const me = async (
       onboardingDone: true,
       avatarUrl: true,
       emailVerified: true,
+      password: true,
       subscription: {
         select: {
           status: true,
@@ -239,7 +247,8 @@ export const me = async (
     return;
   }
 
-  res.json(user);
+  const { password: _pw, ...userWithoutPassword } = user;
+  res.json({ ...userWithoutPassword, hasPassword: user.password !== null });
 };
 
 export const completeOnboarding = async (
@@ -450,27 +459,27 @@ export const deleteAccount = async (
 ): Promise<void> => {
   const userId = req.user!.userId;
 
-  // Verifica senha para confirmar identidade
-  const { password } = req.body as { password?: string };
-  if (!password) {
-    res
-      .status(400)
-      .json({ message: "Informe sua senha para confirmar a exclusão" });
-    return;
-  }
-
   const user = await prisma.user.findUnique({ where: { id: userId } });
   if (!user) {
     res.status(404).json({ message: "Usuário não encontrado" });
     return;
   }
 
-  const valid = user.password
-    ? await bcrypt.compare(password, user.password)
-    : false;
-  if (!valid) {
-    res.status(401).json({ message: "Senha incorreta" });
-    return;
+  // Usuários com senha precisam confirmá-la; usuários Google (sem senha) já
+  // estão autenticados via JWT — não há segredo adicional para verificar.
+  if (user.password) {
+    const { password } = req.body as { password?: string };
+    if (!password) {
+      res
+        .status(400)
+        .json({ message: "Informe sua senha para confirmar a exclusão" });
+      return;
+    }
+    const valid = await bcrypt.compare(password, user.password);
+    if (!valid) {
+      res.status(401).json({ message: "Senha incorreta" });
+      return;
+    }
   }
 
   // Cancela assinatura no Asaas antes de apagar os dados
