@@ -174,8 +174,8 @@ export async function generateNutritionalGuidance(
 
 Seu papel:
 - Acolher o paciente.
-- Explicar sintomas apenas com base na Base de conhecimento fornecida.
-- Reforçar orientações já cadastradas pela nutricionista.
+- Explicar sintomas apenas com base nas informações fornecidas pela nutricionista.
+- Reforçar as recomendações da nutricionista.
 - Incentivar contato com a nutricionista ou médico prescritor quando necessário.
 
 Limites obrigatórios:
@@ -192,7 +192,7 @@ Responda SOMENTE com base na Base de conhecimento.
 O perfil, histórico, dose atual e progresso servem apenas para PERSONALIZAR a forma da resposta, nunca para criar novas orientações técnicas.
 
 Caso a Base de conhecimento esteja vazia ou não cubra o sintoma:
-- Informe de forma acolhedora que ainda não há orientação cadastrada para esse tema.
+- Informe de forma acolhedora que ainda não tem informações sobre esse tema para compartilhar.
 - Oriente o paciente a falar diretamente com a nutricionista pelo chat.
 - Não dê dicas adicionais.
 
@@ -201,6 +201,7 @@ Estilo da resposta:
 - Tom empático, simples e objetivo.
 - Resposta curta, prática e humanizada.
 - Evite listas longas.
+- Nunca use termos internos como "cadastrado", "base de conhecimento" ou "orientação cadastrada". Fale de forma natural e humanizada, como se as informações partissem de você.
 ${patientName ? `- Chame o paciente pelo primeiro nome: "${patientName.split(" ")[0]}".` : ""}
 
 Formato obrigatório da resposta:
@@ -260,7 +261,7 @@ Regras para esta resposta:
 - Não crie hipóteses além das descritas na Base de conhecimento.
 - Não sugira alimentos, quantidades, suplementos, exames, medicamentos ou mudanças de dose se isso não estiver escrito na Base de conhecimento.
 - Use o perfil e o histórico apenas para adaptar o tom e mencionar evolução dos sintomas, sem criar novas condutas.
-- Se a Base de conhecimento estiver vazia ou insuficiente para os sintomas relatados, diga que ainda não há orientação cadastrada para esse tema e oriente contato com a nutricionista pelo chat.`;
+- Se a Base de conhecimento estiver vazia ou insuficiente para os sintomas relatados, diga de forma acolhedora que ainda não tem informações sobre esse tema e oriente contato com a nutricionista pelo chat.`;
 
   const response = await client.chat.completions.create({
     model: MODEL,
@@ -268,7 +269,7 @@ Regras para esta resposta:
       { role: "system", content: systemPrompt },
       { role: "user", content: userPrompt },
     ],
-    temperature: 0.7,
+    temperature: 0.4,
     max_completion_tokens: 800,
   });
 
@@ -281,7 +282,7 @@ Regras para esta resposta:
 export async function generateSpeech(text: string): Promise<Buffer> {
   const response = await client.audio.speech.create({
     model: "tts-1",
-    voice: "nova",
+    voice: "shimmer",
     input: text,
     response_format: "mp3",
   });

@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -21,6 +21,10 @@ import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import Markdown from 'react-native-markdown-display';
+import ReactNativeBlobUtil from 'react-native-blob-util';
+import Sound from 'react-native-sound';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { API_URL } from '@env';
 import api from '../../lib/api';
 import { useAuthStore } from '../../store/auth.store';
 import type {
@@ -57,7 +61,6 @@ function getGreeting(): string {
   return 'Boa noite';
 }
 
-/* Strip markdown for plain preview */
 function stripMd(text: string, maxLen = 110): string {
   return text
     .replace(/#{1,6}\s?/g, '')
@@ -207,6 +210,10 @@ function Glp1ScreenInner() {
   const [reviewDone, setReviewDone] = useState(false);
   const [reviewReason, setReviewReason] = useState('');
   const [showReviewInput, setShowReviewInput] = useState(false);
+  const [ttsPlaying, setTtsPlaying] = useState(false);
+  const [ttsLoading, setTtsLoading] = useState(false);
+  const [ttsError, setTtsError] = useState('');
+  const soundRef = useRef<Sound | null>(null);
 
   const loadSymptoms = useCallback(async () => {
     try {
@@ -254,7 +261,32 @@ function Glp1ScreenInner() {
   useEffect(() => {
     loadData();
     loadSymptoms();
-  }, [loadData]);
+  }, [loadData, loadSymptoms]);
+
+  const stopTts = useCallback(() => {
+    if (soundRef.current) {
+      soundRef.current.stop();
+      soundRef.current.release();
+      soundRef.current = null;
+    }
+    setTtsPlaying(false);
+    setTtsLoading(false);
+  }, []);
+
+  useEffect(() => {
+    Sound.setCategory('Playback');
+    return () => {
+      soundRef.current?.stop();
+      soundRef.current?.release();
+      soundRef.current = null;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (view !== 'result') {
+      stopTts();
+    }
+  }, [view, stopTts]);
 
   const onRefresh = () => {
     setRefreshing(true);
@@ -353,7 +385,71 @@ function Glp1ScreenInner() {
     }
   };
 
+  const toggleTts = useCallback(async () => {
+    if (!result?.id) return;
+
+    if (ttsPlaying || soundRef.current) {
+      stopTts();
+      return;
+    }
+
+    setTtsLoading(true);
+    setTtsError('');
+
+    try {
+      const token = await AsyncStorage.getItem('@minhanutrionline:token');
+      const baseUrl = API_URL ?? 'http://10.0.2.2:3001';
+      // Cada relatório tem seu próprio arquivo em cache → sem re-request
+      const tempPath =
+        ReactNativeBlobUtil.fs.dirs.CacheDir + `/tts_${result.id}.mp3`;
+
+      const fileExists = await ReactNativeBlobUtil.fs.exists(tempPath);
+
+      if (!fileExists) {
+        const res = await ReactNativeBlobUtil.config({ path: tempPath }).fetch(
+          'POST',
+          `${baseUrl}/api/v1/glp1/tts`,
+          {
+            Authorization: `Bearer ${token ?? ''}`,
+            'Content-Type': 'application/json',
+          },
+          JSON.stringify({ reportId: result.id }),
+        );
+
+        if (res.respInfo?.status !== 200) {
+          // Remove arquivo parcial que possa ter sido criado
+          await ReactNativeBlobUtil.fs.unlink(tempPath).catch(() => null);
+          setTtsLoading(false);
+          setTtsError(
+            'Erro ao gerar áudio. Verifique se o servidor está ativo.',
+          );
+          return;
+        }
+      }
+
+      const sound = new Sound(tempPath, '', error => {
+        if (error) {
+          setTtsError('Não foi possível reproduzir o áudio.');
+          setTtsLoading(false);
+          return;
+        }
+        soundRef.current = sound;
+        setTtsLoading(false);
+        setTtsPlaying(true);
+        sound.play(() => {
+          setTtsPlaying(false);
+          sound.release();
+          if (soundRef.current === sound) soundRef.current = null;
+        });
+      });
+    } catch (err: any) {
+      setTtsLoading(false);
+      setTtsError(`Erro ao carregar o áudio: ${err?.message ?? String(err)}`);
+    }
+  }, [result?.id, ttsPlaying, stopTts]);
+
   const goToForm = () => {
+    stopTts();
     loadSymptoms();
     setSelected([]);
     setNotes('');
@@ -822,6 +918,32 @@ function Glp1ScreenInner() {
             </Text>
           </View>
           <Markdown style={markdownStyles}>{result?.aiResponse ?? ''}</Markdown>
+          <TouchableOpacity
+            style={[styles.audioBtn, ttsLoading && styles.audioBtnDisabled]}
+            onPress={toggleTts}
+            activeOpacity={0.85}
+            disabled={ttsLoading}
+          >
+            {ttsLoading ? (
+              <ActivityIndicator size="small" color="#2563eb" />
+            ) : (
+              <Ionicons
+                name={
+                  ttsPlaying ? 'stop-circle-outline' : 'volume-high-outline'
+                }
+                size={18}
+                color="#2563eb"
+              />
+            )}
+            <Text style={styles.audioBtnText}>
+              {ttsLoading
+                ? 'Carregando áudio...'
+                : ttsPlaying
+                ? 'Parar áudio'
+                : 'Ouvir orientação'}
+            </Text>
+          </TouchableOpacity>
+          {!!ttsError && <Text style={styles.audioErrorText}>{ttsError}</Text>}
         </View>
 
         {/* Avaliação */}
@@ -1282,6 +1404,27 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   aiCardHeaderText: { fontSize: 13, fontWeight: '700', color: '#16a34a' },
+  audioBtn: {
+    marginTop: 12,
+    alignSelf: 'flex-start',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: '#bfdbfe',
+    backgroundColor: '#eff6ff',
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+  },
+  audioBtnText: { fontSize: 13, fontWeight: '700', color: '#2563eb' },
+  audioBtnDisabled: { opacity: 0.6 },
+  audioErrorText: {
+    marginTop: 8,
+    fontSize: 12,
+    color: '#ef4444',
+    lineHeight: 18,
+  },
 
   // Evolution card
   evolutionCard: {

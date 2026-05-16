@@ -83,24 +83,36 @@ export function useTTS({ text, reportId }: { text: string; reportId: string }) {
 
     setState("loading");
     try {
-      const token =
-        typeof window !== "undefined" ? localStorage.getItem("token") : null;
+      const cacheKey = `tts-${reportId}`;
+      const cacheStorage = await caches.open("tts-audio");
+      let blob: Blob;
 
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001/api/v1"}/glp1/tts`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      const cached = await cacheStorage.match(cacheKey);
+      if (cached) {
+        blob = await cached.blob();
+      } else {
+        const token =
+          typeof window !== "undefined" ? localStorage.getItem("token") : null;
+
+        const response = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001/api/v1"}/glp1/tts`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              ...(token ? { Authorization: `Bearer ${token}` } : {}),
+            },
+            body: JSON.stringify({ reportId }),
           },
-          body: JSON.stringify({ reportId }),
-        },
-      );
+        );
 
-      if (!response.ok) throw new Error("TTS request failed");
+        if (!response.ok) throw new Error("TTS request failed");
 
-      const blob = await response.blob();
+        // Clona antes de consumir — Cache API precisa de uma response intacta
+        const responseToCache = response.clone();
+        await cacheStorage.put(cacheKey, responseToCache);
+        blob = await response.blob();
+      }
       const url = URL.createObjectURL(blob);
       objectUrlRef.current = url;
 
